@@ -1,1 +1,1 @@
-# LogosAI
+# ScriptureLM
