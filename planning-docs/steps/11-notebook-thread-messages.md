@@ -1,28 +1,23 @@
 # Step 11: Notebook, single thread, and chat history persistence
 
-**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §5.1 (one notebook, single thread MVP), §7 (`Notebook`, `ChatThread`, `Message`), §15 #4.
+**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §5.1, §7, §15 #4.
 
 ## Manual actions (you must do)
 
-- Confirm on **first login** (Step 05) or on first visit to chat UI that **exactly one** `Notebook` and **`ChatThread`** exist; fix up any legacy users with a one-off migration if you iterated early.
+- If you already have **legacy DB rows** from early experiments (multiple threads per notebook), run the **one-off cleanup** or migration the agent provides, **or** reset your dev database—your choice as operator.
 
-## Goal
+## Instructions for the AI coding agent
 
-The product exposes **one conversation surface** per user backed by durable **`Message` rows** (§5.1, §15 #4).
-
-## What you will build
-
-- API to **list messages** for the user’s sole thread (newest first or chronological—pick one and stick to it).
-- API to **append** user and assistant messages (assistant insert may start as a stub in Step 11—placeholder content ok until Step 13).
-- Chat UI shell: **message list** + input; **without** streaming yet, you can POST a user message and see it echoed or acknowledged.
-
-## Implementation notes
-
-- **`retrieval_debug` JSON** can remain `NULL` until Step 13; schema should allow it (§7).
-- Prepare UI for **keyboard-friendly** chat (§6.5)—focus management on send.
+1. **`GET /api/chat/messages`**: returns messages for the authenticated user’s **sole** `ChatThread`, **chronological** order (oldest first for chat UI) or document reverse with client handling—**pick one** and stay consistent with Step 13 streaming append.
+2. **`POST /api/chat/messages`**: accepts `{ content: string }`; persists **user** message; for this step may return **ack only** or echo—**assistant** reply can be stubbed empty until Step 13 **if** Step 13 will replace the endpoint—prefer **single** evolving endpoint to avoid duplicate routes.
+3. **UI**: chat page under workspace with **message list**, **textarea**, **Send** button; after POST, **revalidate** or optimistic append.
+4. **Keyboard**: **Enter** to send (with **Shift+Enter** for newline if multiline), **focus** management after send (§6.5).
+5. **`retrieval_debug`**: leave **null**; schema already allows JSON from Step 03.
+6. **Tests**: with test session/user fixture, POST three messages → GET returns **3** in order; assert **409** or DB error if code path tries second thread (should be impossible via API).
+7. Align with Step 05 lazy creation: if thread missing on first message, **create** notebook/thread in same transaction as first message (idempotent).
 
 ## Definition of done (testable)
 
-- Automated test or script: create user session context → POST three messages → GET history returns **3** in correct order.
-- Refreshing the page **does not lose** history (persistence verified).
-- Enforcing **single thread** per notebook: attempt to create second thread **fails** or is impossible by design (document which).
+- Automated test or integration: three-round trip messages persist and reload.
+- Refreshing browser does **not** lose messages.
+- API cannot create a **second** thread for the same notebook (enforced at DB or service layer—document).

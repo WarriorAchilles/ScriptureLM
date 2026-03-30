@@ -2,6 +2,13 @@
 
 This folder breaks the [master specification](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) into **ordered, testable steps**. Complete steps in sequence unless a step explicitly says it can run in parallel.
 
+Each step (except **00**) is structured for a **human owner** plus an **AI coding agent**:
+
+- **Manual actions (you must do)** — Things **you** do that are **not** writing application code: cloud consoles, IAM, billing, putting secrets in local env files, legal/compliance review, optional product choices, and running your machine’s prerequisites.
+- **Instructions for the AI coding agent** — What the agent should **implement** in the repo: files, APIs, tests, and docs-as-code (e.g. `.env.example`). The agent should follow the [master spec](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) (especially **§15**) and match existing project conventions when present.
+
+**Local database (default for this repo):** Day-to-day development targets **Postgres + pgvector in Docker** (`docker compose`). Optionally use a **cloud dev RDS** instance with the same migrations; the app uses **`DATABASE_URL`** — keep Docker there by default and swap to RDS only when you need AWS-parity checks. Details: root [`README.md`](../../README.md), Step [00](./00-prerequisites.md), Step [02](./02-local-postgres-pgvector.md).
+
 | Step | Focus |
 |------|--------|
 | [00-prerequisites.md](./00-prerequisites.md) | Accounts, tools, and decisions before implementation |

@@ -1,35 +1,28 @@
 # Step 16: AWS deployment and observability
 
-**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §6.2 (AWS mapping), §6.6 (encryption, TLS), §9 (logs, budget alarms), §13 success criteria (deployed on AWS), §10 Phase 1 outcome.
+**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §6.2, §6.6, §9, §13, §10 Phase 1.
 
 ## Manual actions (you must do)
 
-- Provision **RDS PostgreSQL** with **pgvector** in your chosen region; configure **backups** and **parameter groups** as appropriate.
-- Deploy **S3** buckets per environment; **encrypt** and block public access; set **lifecycle** if needed for cost (§6.6).
-- Choose **App Runner** or **ECS Fargate** (§6.2) and wire **CI** (GitHub Actions or similar) with **OIDC** to AWS where possible (§6.6).
-- Create **CloudWatch** log groups; optional **budgets/alerts** for Bedrock + Anthropic + RDS (§9).
-- Run **TLS** termination at platform (HTTPS URL for users).
+- **Provision AWS**: RDS Postgres with **pgvector**, S3 buckets, IAM roles, **App Runner** or **ECS** service, **VPC** subnets/security groups, **Secrets Manager** or **SSM** parameters for prod secrets.
+- **Register** your **GitHub** (or CI) **OIDC** trust in IAM if using OIDC deploys; add repo **secrets** the workflow needs (`AWS_ROLE_ARN`, etc.).
+- Point your **DNS / HTTPS** at the deployed service (platform handles TLS cert or you attach ACM).
+- In **AWS Billing**, create a **budget or cost anomaly alert** for the account or tagged resources (§9).
+- **Run** the first production migration and smoke test **yourself** after first deploy (operator).
 
-## Goal
+## Instructions for the AI coding agent
 
-The MVP runs **on AWS** behind HTTPS with **logs** and **basic operability**: you can deploy, roll back, and see failures without SSH guesswork (§13, §9).
-
-## What you will build
-
-- **Dockerfile(s)** for Next.js app and (if separate) worker; document **`DATABASE_URL`** and **worker** startup in compose/k8s/App Runner config.
-- **Migrations** on deploy (job container or init task—pick a safe pattern).
-- **Secrets** loaded from **Secrets Manager/SSM**, not baked into images (§6.6).
-- **Smoke test** script: health check, auth sign-in, one RAG question against staging corpus (§8 testing note).
-
-## Implementation notes
-
-- **VPC** layout per §6.2 single-tenant shortcut; RDS in private subnets; compute in same VPC.
-- **CloudFront** optional for MVP—add when needed (§6.2 CDN row).
-- **Backup/export** is phased in §5.5—document manual snapshot path at minimum.
+1. Add **`Dockerfile`** for Next.js **standalone** output (or documented multi-stage build) suitable for **App Runner / Fargate**; if a **worker** exists, add **second target** or **same image** with different `CMD` (`node worker.js`).
+2. Add **`.dockerignore`**; ensure **no `.env`** copied into image (§6.6).
+3. Add **GitHub Actions workflow** (or equivalent) that: lints/tests, builds image, pushes to **ECR** (optional), deploys via **OIDC**—use placeholders for ARNs the human fills in repo secrets.
+4. Document **`DATABASE_URL`**, **`MIGRATE_ON_START=true`** pattern **or** separate **migration job**—pick **one** safe approach; include bash/psql or `npm run db:migrate` in entrypoint script with failure **non-zero** exit. In comments, distinguish **deployed** `DATABASE_URL` (RDS in AWS) from **local dev** (Docker primary, optional dev RDS swap — root `README.md`).
+5. Add **`scripts/smoke-staging.ts`** (or shell): `GET /api/health`, optional **sign-in** cookie flow stub, one **chat** POST against staging URL with **env `SMOKE_BASE_URL`**—skip if no creds in CI.
+6. Add **structured logging** helper if not present: **`correlationId`** middleware on API routes (header in + prop through retrieval + LLM logs) (§9).
+7. In the **workflow YAML** (and `Dockerfile` comments where helpful), note **CloudWatch** log group naming, **RDS backup** expectation, and optional **S3 lifecycle**—do **not** add new markdown files unless the human asks for a runbook doc.
 
 ## Definition of done (testable)
 
-- Public HTTPS URL loads the app; **protected routes** still enforce auth.
-- **Staging** runs **full path**: ingest job → `ready` source → chat answer (can be scripted).
-- **Logs** show structured lines for ingest, retrieval, and generation with **request correlation id**.
-- **Budget or billing alarm** exists for your account or tagged resources (even a minimal budget alert counts for MVP ops).
+- `docker build .` succeeds locally.
+- CI workflow file **validates** (dry-run or act if available) and documents required **secrets**.
+- Smoke script exits 0 against local or staging when env provided.
+- Logs include **correlation id** on at least chat and ingest paths when those routes are hit.

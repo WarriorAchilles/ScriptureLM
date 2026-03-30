@@ -1,29 +1,24 @@
 # Step 10: Read-only source catalog (API + UI)
 
-**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §5.2 (source list UX), §5.1 (indexing status visibility), §6.5 (no end-user upload), §2 goals (multi-source KB).
+**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §5.2 (source list UX), §5.1 (indexing status), §6.5 (no end-user upload).
 
 ## Manual actions (you must do)
 
-- Seed or ingest **at least two** `Source` rows with different **`corpus` values** so the UI is non-trivial (e.g. one `scripture` book fixture, one `sermon` fixture).
-- Decide **empty-state** copy that explains the **shared catalog** model (§1, §5.1)—no user uploads.
+- In **dev**, use operator tooling (Steps 06–09) or seed data so **at least two** `Source` rows exist with different **`corpus`** values—so you can **see** the UI populated. This is data entry / ops, not code.
+- Optionally tell the agent preferred **product tone** for empty-state copy (theological workspace vs neutral); otherwise the agent picks concise default copy aligned with §1.
 
-## Goal
+## Instructions for the AI coding agent
 
-Authenticated users see a **read-only** list of sources: **name/title**, **corpus tag**, **indexing status**, and enough identity to pick sources later (§5.2).
-
-## What you will build
-
-- **API**: list sources (exclude soft-deleted/hidden by default per Step 03 rules).
-- **UI page** in the workspace: table or cards with status badges (`pending`, `ready`, `failed`), error hint for failures.
-- Loading and error states; keyboard-accessible layout (§6.5 accessibility note).
-
-## Implementation notes
-
-- **No mutation controls** for ordinary users (§5.2).
-- Fetch should be **efficient enough** for ~1,200 sermon rows—consider pagination or virtualized list when you approach that scale (§11 “corpus scale”).
+1. **`GET /api/sources`** (or Server Component loader with auth): returns **paginated** list of catalog sources **excluding** soft-deleted/hidden by default (Step 03 filters). Include: **display name/title** (from metadata or filename), **`corpus`**, **`status`**, **`error_message`** (truncated for UI), **`updatedAt`**.
+2. Enforce **session**: same auth as Step 05; return **401** when unauthenticated.
+3. Add **`/workspace/sources`** (or nested route): **read-only** table or card grid; **status badges** for `pending` / `ready` / `failed`; show **error snippet** for failures (§5.2).
+4. **Accessibility**: semantic table or list, **focus** styles, `aria-live` for loading/errors where appropriate (§6.5).
+5. **Performance**: implement **`limit` + `cursor`** or offset pagination; document how UI will scale toward **~1,200** rows (virtualization optional but comment the hook point §11).
+6. **No** upload, delete, or edit controls for end users (§5.2).
+7. **Tests**: API returns 401 without session; with mocked session returns expected JSON shape.
 
 ## Definition of done (testable)
 
-- Manual or E2E: logged-in user opens catalog page and sees **correct row count** matching API.
-- A `failed` source shows **actionable error text** from `error_message` (truncated ok).
-- Unauthenticated user **cannot** access the catalog API (401/403/redirect).
+- Logged-in user sees row count matching API for seeded data.
+- `failed` source shows human-readable **error** from DB.
+- Unauthenticated `GET /api/sources` → **401**.

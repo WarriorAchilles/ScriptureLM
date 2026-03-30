@@ -1,27 +1,23 @@
 # Step 00: Prerequisites and environment
 
-**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — read §0–§4, §6.2–§6.3, §11, and §15 before writing code.
+**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — read §0–§4, §6.2–§6.3, §11, and §15 before any implementation work.
 
 ## Manual actions (you must do)
 
-- Create or confirm an **AWS account** with permission to use **RDS**, **S3**, **Bedrock** (for embeddings), **Secrets Manager** or **SSM**, and your chosen compute (**App Runner** or **ECS Fargate** per §6.2).
-- Create an **Anthropic** account and obtain API access for **Claude** (Messages API) for generation (§6.3).
-- In Bedrock, **request model access** for **Titan Embeddings** (or the successor you will use); note **model ID**, **region**, and **embedding dimensions** when you implement Step 08.
-- Install **Node.js** (LTS), **Docker Desktop** (or compatible engine) for local Postgres/pgvector, and **Git**.
-- Decide your **local DB workflow** (Docker Compose vs. cloud dev RDS). Step 02 assumes a reproducible local database.
-- Review **content licensing** for any corpus you will load (§3.1); the application does not verify rights.
+- Create or confirm an **AWS account** with permission to use **RDS**, **S3**, **Bedrock** (embeddings), **Secrets Manager** or **SSM**, and your chosen compute (**App Runner** or **ECS Fargate** per §6.2).
+- Create an **Anthropic** account and ensure you can issue an API key for **Claude** (Messages API) when Step 13 needs it (§6.3).
+- In the **Bedrock** console, **request model access** for **Titan Embeddings** (or the successor you will use). You will copy **model ID**, **region**, and **dimensions** into `.env.local` when the agent wires Step 08.
+- Install **Node.js** (LTS), **Docker Desktop** (or a compatible engine), and **Git** on the machine where you run the app.
+- **Local database posture (this project):** use **both** — **Docker Postgres + pgvector** for day-to-day development (fast, offline-capable), and optionally a **cloud dev RDS** instance when you need AWS-faithful behavior or shared dev data. The app reads a single active connection string (**`DATABASE_URL`**); put the Docker URL there by default and swap to your RDS URL only when intentionally testing against AWS (see Step 02 and root `README.md`). If you provision **dev RDS**, handle **network access** (security groups, VPN, or tunnel) yourself.
+- Review **content licensing** for corpora you will load (§3.1); the app does not verify rights.
 
-## Goal
+## Instructions for the AI coding agent
 
-Eliminate blocked time later: credentials, quotas, and tooling are ready so Steps 01+ can run without mid-stream account work.
-
-## What this step produces
-
-- Documented **region choices**, **model IDs** (placeholders ok until Step 08), and where secrets will live.
-- A short note (even in a private doc) listing **which AWS services** you will provision first for MVP.
+- **Do not** change application code for this step unless the human explicitly asks for a small onboarding link in an existing root `README`.
+- When editing docs, treat **local dev** as **Docker Postgres primary** + **optional `DATABASE_URL_RDS_DEV`** (or equivalent) documented in `.env.example` per Step 02 — never imply RDS-only local dev.
 
 ## Definition of done (testable)
 
-- You can run `node -v` and `docker version` successfully on your machine.
-- Anthropic API and Bedrock console are accessible (you can open the Bedrock model catalog / Anthropic key UI without errors).
-- You have read the master spec sections referenced above and agree with locked decisions in **§15** (pgvector, KJV per-book sources, no admin web UI in v1, single thread, inline citations).
+- `node -v` and `docker version` succeed on your machine.
+- You can sign in to **Anthropic** and **AWS Bedrock** consoles without access errors.
+- You have read the master spec sections above and accept **§15** decisions (pgvector + Titan embeddings, KJV per-book sources, no admin web UI in v1, single chat thread, inline citations, text-native PDFs only, soft-delete + scheduled purge for sources).

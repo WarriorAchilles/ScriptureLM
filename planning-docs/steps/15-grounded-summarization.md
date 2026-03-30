@@ -1,29 +1,26 @@
 # Step 15: Grounded summarization (per-source and library brief)
 
-**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §5.4 (summaries, controls, regeneration), §13 success criteria (library overview), §6.3 (Claude generation).
+**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §5.4, §13, §6.3.
 
 ## Manual actions (you must do)
 
-- Decide **UX placement**: separate “Summaries” tab vs inline from catalog row actions (read-only users **consume** summaries only—generation triggers may be rate-limited server-side).
-- Choose **parameters**: length, audience tone, optional focus prompt (§5.4).
+- Decide where summaries **live in the product** (e.g. tab vs modal). If you care, tell the agent **before** implementation; otherwise accept the agent’s default (**Summaries** sub-route under workspace).
 
-## Goal
+## Instructions for the AI coding agent
 
-Users can generate **per-source** summaries and a **library-level brief**, grounded with **attribution** to sources used—**regeneratable** with different parameters without duplicating source blobs (§5.4).
-
-## What you will build
-
-- API: given **`source_id`** (+ controls), fetch representative chunks (first N, retrieved outline, or full text under token cap—document approach).
-- API: given **scope** similar to chat (optional), synthesize **library overview** citing contributing sources.
-- Persist or **ephemeral** responses: acceptable if regenerated on demand for MVP—if persisted, store `summary_params` hash to avoid clutter (your call; align with §5.4 regeneration story).
-
-## Implementation notes
-
-- Reuse **Claude** client patterns from Step 13; do **not** leak API keys.
-- Summaries must **fail gracefully** if source text unavailable or still indexing.
+1. **`POST /api/summaries/source`**: body `{ sourceId, length: 'short'|'long', audience: 'plain'|'technical', focus?: string }`.
+   - Load **Source**; if not `ready`, return **409** with clear message.
+   - Build context: **concatenate** chunk texts up to a **token/char budget** (document algorithm: first-N chunks vs round-robin across sections); include **source title/filename** in prompt.
+   - Call **Claude** non-streaming (or streaming if UI prefers—pick one); require **explicit attribution** lines (“Sources: …”) (§5.4).
+2. **`POST /api/summaries/library`**: body `{ length, audience, focus?, sourceIds?, corpus? }` mirroring chat scope rules from Step 14.
+   - Pull **top-level** overview across **multiple** sources; response must **name each** contributing source id or title.
+3. **UI**: form controls for parameters; **Regenerate** button re-POSTs with same or edited focus (§5.4 regeneration—no duplicate blob storage).
+4. **Persistence**: **ephemeral** response in v1 is acceptable (return JSON/markdown to client only); if persisting, add **`Summary` table** optional—only if you implement, add migration + **`params_hash`** dedupe note in code comments.
+5. **Tests**:
+   - Mock LLM: assert prompt includes **two** source names for library call with two IDs.
+   - `not ready` source → **409**.
 
 ## Definition of done (testable)
 
-- Integration: for a `ready` fixture source, summary JSON/markdown references **source title or id** explicitly.
-- Library brief with **two** sources in scope mentions **both**; with **one** source excluded, that source **does not** appear (given deterministic prompt instructions + fixture).
-- Changing **length** parameter yields measurably different output (simple assertion on word count threshold).
+- Mock/integration tests cover **409** and **multi-source** prompt content.
+- Manual: per-source and library calls return text that **names** the source(s); changing **`length`** yields visibly different length (agent can add trivial assertion on word count in mock test).

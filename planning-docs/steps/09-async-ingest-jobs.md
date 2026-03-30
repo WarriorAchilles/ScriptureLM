@@ -1,31 +1,26 @@
 # Step 09: Async ingest and reindex jobs
 
-**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §6.1 (async jobs), §6.2 (SQS or worker), §6.4 (reindex), §7 (`Job` entity), §9 (idempotency).
+**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §6.1 (async jobs), §6.2 (SQS), §6.4 (reindex), §7 (`Job`), §9 (idempotency).
 
 ## Manual actions (you must do)
 
-- Choose **MVP orchestration**: **Amazon SQS + Fargate worker**, **in-process queue**, or **Step Functions**—simplest that you will actually operate (§6.2). For solo MVP, an **SQS-free** worker polling a `jobs` table is acceptable if documented.
-- Configure IAM for **SQS** if used; create queues **dev** / **prod**.
-- Decide operator UX: **CLI triggers job** with `source_id` or `full-catalog` flag (§5.5).
+- If the agent implements **SQS**: create **queue(s)** in AWS dev, copy **queue URL** into `.env.local`, and grant **`sqs:ReceiveMessage`**, **`DeleteMessage`**, **`SendMessage`**, **`ChangeMessageVisibility`** to the worker role/user.
+- Run **`npm run worker`** (or Docker worker) in a **second terminal** when testing locally—starting the worker is your ops step, not the agent’s.
 
-## Goal
+## Instructions for the AI coding agent
 
-Ingest + embed work is **non-blocking** and **retryable**: failures surface on `Job` and `Source` without wedging the web server (§6.1, §6.4).
-
-## What you will build
-
-- `Job` rows: `pending` → `running` → `succeeded` / `failed`; **attempts** incremented with backoff policy.
-- Worker process entry (`npm run worker` or second container) consuming messages or claiming DB jobs.
-- **Idempotency keys** on ingest (same `source_id` + pipeline version should not duplicate chargeable work blindly—§9).
-- Operator command: **enqueue ingest** / **reindex** for one source or all (full catalog may be slow—log progress).
-
-## Implementation notes
-
-- **Poison messages**: after max attempts, mark job failed and leave **`Source` in `failed`** with last error (§5.2).
-- **Reindex** implies **delete/replace vectors** for that source consistently to avoid orphaned vectors (align with §15 #9 later for hard purge).
+1. Implement **job lifecycle** on **`Job`** table: `pending` → `running` → `succeeded` | `failed`; increment **`attempts`**, store **`last_error`**, **`started_at`**, **`finished_at`** if columns exist or add them via migration.
+2. **Worker entrypoint**: `npm run worker` that:
+   - **Mode A (default solo MVP):** polls DB for `pending` jobs with **`FOR UPDATE SKIP LOCKED`** (or equivalent) every N seconds.
+   - **Mode B (optional):** long-polls **SQS**; message body contains `jobId` or payload; **delete message** only after success; visibility timeout for retries.
+3. **Job handler** for `ingest`: run Step 07 pipeline then Step 08 embed for that `source_id` in one logical unit **or** split sub-steps with clear state—**document**. On failure after max attempts, set **`Source.status=failed`** and job `failed`.
+4. **Job handler** for `reindex`: **delete** existing chunks (and embeddings) for `source_id`, reset `Source` to appropriate status, re-run extract/chunk/embed (§6.4). Ensure **no orphan vectors**.
+5. **Idempotency**: include **`pipeline_version`** or `text_extraction_version` in job payload; if same version re-enqueued, **no-op** or **replace** deterministically (§9).
+6. **Operator CLI**: `npm run jobs:enqueue -- ingest --sourceId=...` and `reindex --sourceId=...` | `all` (iterate all sources—log progress). Guard with **`OPERATOR_INGEST_SECRET`** or DB role.
+7. **Tests**: enqueue job → in-process worker function invoked in test → `Source` ends `ready` with chunks+embeddings; simulate throw → `failed` with attempts incremented.
 
 ## Definition of done (testable)
 
-- Enqueue a job for a **`pending` source**; worker processes it to **`ready`** without manual intervention.
-- Kill worker mid-job once; on retry, system **recovers** to correct final status without duplicate chunks (assert in test or scripted scenario).
-- Operator can list **recent jobs** via CLI or SQL query documented in step README—human-visible status counts as testable for MVP ops.
+- One command enqueues work; worker run completes **`ready`** source without manual SQL.
+- Forced failure retries up to **max attempts** then stops with visible error on `Source` and `Job`.
+- Documented command lists **recent jobs** (SQL snippet or `npm run jobs:list`).

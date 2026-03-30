@@ -1,28 +1,24 @@
 # Step 01: Next.js monolith scaffold
 
-**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §6 (monolith posture), §6.5 (App Router), §6.1 component (1) web app.
+**Master spec:** [NOTEBOOKLM-CLONE-MASTER-SPEC.md](../NOTEBOOKLM-CLONE-MASTER-SPEC.md) — §6 (monolith), §6.5 (App Router), §6.1 (web app component), §15 #5.
 
 ## Manual actions (you must do)
 
-- Initialize the repo layout if not already present (`create-next-app` or equivalent) and choose **TypeScript** + **App Router** (§6.5).
-- Pick package manager (`npm`, `pnpm`, or `yarn`) and stick to it for the project.
+- Ensure **Node.js LTS** is installed and you can run the package manager the repo will use (`npm`, `pnpm`, or `yarn`).
+- If your organization requires a specific registry or proxy, configure it before installing dependencies.
 
-## Goal
+## Instructions for the AI coding agent
 
-A **single deployable Next.js application** that will later host UI, API routes, and can share code with a worker process from the same repo (§6.1, §15 #5).
-
-## What you will build
-
-- Next.js project with **App Router**, baseline **lint/format** scripts, and a minimal **layout** (placeholder home).
-- A trivial **`GET /api/health`** (or Route Handler equivalent) returning JSON `{ "ok": true }` without external dependencies.
-
-## Implementation notes
-
-- Do **not** add vector DB or auth in this step; keep the shell boring and fast to iterate.
-- Structure folders so a future **worker entry** (e.g. `worker.ts` or separate npm script) can import shared ingest/retrieval modules without circular hacks.
+1. **Scaffold or align** a **Next.js** app with **TypeScript** and the **App Router** (§6.5). If the repo already has a Next app, normalize it to this shape instead of nesting a second app.
+2. Add baseline **scripts**: `dev`, `build`, `start`, `lint` (and `format` if the repo uses Prettier).
+3. Add a minimal **root layout** and a simple **home page** (placeholder copy is fine).
+4. Implement **`GET /api/health`** as a Route Handler returning JSON such as `{ "ok": true }` with **no** database or external service calls.
+5. Create a **`src/lib/`** (or `lib/`) folder convention and a **stub** `package.json` script or comment block documenting where a future **`worker`** entry will live (same repo, shared imports per §6.1).
+6. Ensure **`npm run build`** passes in CI-friendly conditions (strict TypeScript if the template enables it).
+7. **Do not** add auth, ORM, AWS SDK, or vector dependencies in this step.
 
 ## Definition of done (testable)
 
-- `npm run dev` (or your package manager equivalent) starts without errors.
+- `npm run dev` (or equivalent) starts without errors.
 - `GET /api/health` returns **200** and JSON indicating readiness.
-- `npm run build` (or CI build) succeeds.
+- `npm run build` succeeds.
