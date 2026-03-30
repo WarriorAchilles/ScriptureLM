@@ -2,6 +2,22 @@
 
 NotebookLM-style theological research workspace (shared catalog, RAG chat, grounded summaries). Product scope and architecture live in [`planning-docs/NOTEBOOKLM-CLONE-MASTER-SPEC.md`](planning-docs/NOTEBOOKLM-CLONE-MASTER-SPEC.md).
 
+## Web app
+
+The UI and API are a **Next.js** (App Router) app in this repo (see Step 01 in [`planning-docs/steps/01-nextjs-monolith-scaffold.md`](planning-docs/steps/01-nextjs-monolith-scaffold.md)).
+
+**Prerequisites:** Node.js LTS and npm.
+
+| Command | Purpose |
+| --- | --- |
+| `npm install` | Install dependencies |
+| `npm run dev` | Development server ([http://localhost:3000](http://localhost:3000)) |
+| `npm run build` | Production build |
+| `npm run start` | Run the production server (after `build`) |
+| `npm run lint` | ESLint |
+
+**Health check:** with the app running, `GET /api/health` should return `200` and JSON `{ "ok": true }` (no database required).
+
 ## Local development — database
 
 This project assumes **two layers** for Postgres during development:

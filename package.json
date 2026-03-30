@@ -1,0 +1,25 @@
+{
+  "name": "scripturelm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NotebookLM-style app (Next.js monolith). Future background worker entry: src/worker/index.ts, sharing code via src/lib (planning-docs NOTEBOOKLM-CLONE-MASTER-SPEC.md §6.1).",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "typescript": "^5"
+  }
+}

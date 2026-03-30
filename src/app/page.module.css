@@ -1,0 +1,30 @@
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--background);
+}
+
+.main {
+  max-width: 36rem;
+  text-align: center;
+}
+
+.title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+  color: var(--foreground);
+}
+
+.subtitle {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+}
