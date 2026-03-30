@@ -13,7 +13,7 @@
 ## Instructions for the AI coding agent
 
 1. Add **`docker-compose.yml`** at the repo root (or `infra/`) with a **PostgreSQL image that includes pgvector** (e.g. `pgvector/pgvector:pg16` or equivalent), a **named volume** for data persistence, port mapping **5432**, and documented env vars for user/password/database.
-2. Choose and install a **migration tool** consistent with the project (Prisma, Drizzle, Kysely + raw SQL, etc.). If the repo already picked one in Step 01, **reuse it**.
+2. Choose and install a **migration tool** consistent with the project (Use Prisma).
 3. Add an initial migration (or bootstrap SQL) that runs **`CREATE EXTENSION IF NOT EXISTS vector`**.
 4. Add **`.env.example`** with:
    - **`DATABASE_URL`** — placeholder pointing at **Docker** Postgres (primary local dev).

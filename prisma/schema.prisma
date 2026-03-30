@@ -1,0 +1,13 @@
+// ScriptureLM — Prisma schema (Step 02: datasource + migrations; app tables in later steps).
+// Nullable tenant_id on user-owned tables will appear in Step 03 for SaaS evolution (spec §4.2).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// No application models yet (Step 02 is extension-only). Step 03+ add tables and relations.

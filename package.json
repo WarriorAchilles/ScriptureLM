@@ -5,11 +5,17 @@
   "description": "NotebookLM-style app (Next.js monolith). Future background worker entry: src/worker/index.ts, sharing code via src/lib (planning-docs NOTEBOOKLM-CLONE-MASTER-SPEC.md §6.1).",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:check": "tsx scripts/db-check.ts",
+    "db:check:rds": "tsx scripts/db-check.ts --rds",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.0",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -18,8 +24,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.4.7",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "prisma": "^6.19.0",
+    "tsx": "^4.19.3",
     "typescript": "^5"
   }
 }
