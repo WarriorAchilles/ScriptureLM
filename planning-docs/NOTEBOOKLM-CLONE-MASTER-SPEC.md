@@ -147,19 +147,19 @@ Design **data isolation** and **resource accounting** up front so you do not pai
 
 ### 6.2 Recommended AWS mapping (illustrative)
 
-**Recorded default (§15):** favor the **simplest AWS-native** stack for an operator new to vector DBs.
+**Recorded default (§15):** favor the **simplest AWS-native** stack for an operator new to vector DBs. **Compute** defaults to **AWS App Runner** (see §15); **ECS Fargate** remains an option if you later need fuller VPC orchestration or patterns App Runner does not support.
 
 | Concern | AWS option |
 |--------|------------|
-| Compute (Next.js) | **AWS App Runner** or **ECS Fargate** (containerized Next.js); **Lambda + API Gateway** is possible but can complicate long-running ingest and websockets/streaming. |
+| Compute (Next.js) | **AWS App Runner** — containerized Next.js (default per §15). **ECS Fargate** is an alternative for heavier VPC/service-mesh needs. **Lambda + API Gateway** is possible but can complicate long-running ingest and websockets/streaming. |
 | Database (metadata **and** vectors) | **Amazon RDS (PostgreSQL) + pgvector** — one managed service for relational data and embeddings; minimal moving parts versus OpenSearch. |
 | Object storage | **Amazon S3** — originals + optional extracted text artifacts. |
 | Embeddings | **Amazon Bedrock** (e.g. **Amazon Titan Embeddings**) — stay in-region with RDS; confirm current model ID, dimensions, and quotas at implementation time. |
-| Async jobs | **SQS** + worker on Fargate/App Runner **or** lightweight **Step Functions** for orchestration if pipelines grow. |
+| Async jobs | **SQS** + worker on **App Runner** (second service or same image with different `CMD`) **or** lightweight **Step Functions** for orchestration if pipelines grow. |
 | Auth (future-ready) | **Amazon Cognito** or **Auth.js** with credentials in RDS — Cognito if SaaS is likely. |
 | Secrets | **AWS Secrets Manager** or **SSM Parameter Store**. |
 | Observability | **CloudWatch** logs/metrics; optional **X-Ray** later. |
-| CDN | **CloudFront** in front of App Runner / ALB as traffic grows. |
+| CDN | **CloudFront** in front of **App Runner** as traffic grows (use an **Application Load Balancer** only if you adopt ECS or another target that requires it). |
 
 **Single-tenancy shortcut for MVP:** One VPC, one RDS instance, one bucket with prefix isolation—even if you only use one prefix.
 
@@ -295,6 +295,7 @@ Implementation breakdowns may include: `architecture-decisions.md`, `rag-pipelin
 | 3 | **Operator tooling** | **No dedicated admin web UI** for v1—**CLI / scripts / protected jobs** for ingest and catalog changes. |
 | 4 | **Chat threads** | **Single thread** per user (one conversation surface in MVP). |
 | 5 | **Deployment** | **Monolith**: Next.js app + optional worker from same codebase (not separate services). |
+| 10 | **AWS compute** | **App Runner** for the Next.js service; **second App Runner** service (or same image, different `CMD`) for the SQS worker when needed. **ECS Fargate** only if you later need fuller VPC orchestration than App Runner provides. |
 | 6 | **Citation presentation** | **Inline citations** in model replies (human-readable references next to claims). |
 | 7 | **Hybrid search** | **Not decided** — start **vector-only**; add hybrid if eval shows need (see §12). |
 | 8 | **PDFs** | **Text-native PDFs only** in v1; **no OCR** scope for MVP. |

@@ -4,7 +4,7 @@
 
 ## Manual actions (you must do)
 
-- Create or confirm an **AWS account** with permission to use **RDS**, **S3**, **Bedrock** (embeddings), **Secrets Manager** or **SSM**, and your chosen compute (**App Runner** or **ECS Fargate** per §6.2).
+- Create or confirm an **AWS account** with permission to use **RDS**, **S3**, **Bedrock** (embeddings), **Secrets Manager** or **SSM**, and **App Runner** (plus **VPC connector** pieces if RDS is private) per §6.2 and §15.
 - Create an **Anthropic** account and ensure you can issue an API key for **Claude** (Messages API) when Step 13 needs it (§6.3).
 - In the **Bedrock** console, **request model access** for **Titan Embeddings** (or the successor you will use). You will copy **model ID**, **region**, and **dimensions** into `.env.local` when the agent wires Step 08.
 - Install **Node.js** (LTS), **Docker Desktop** (or a compatible engine), and **Git** on the machine where you run the app.

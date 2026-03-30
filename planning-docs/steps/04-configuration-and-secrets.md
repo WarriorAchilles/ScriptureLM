@@ -16,7 +16,7 @@
 3. Add **`npm run check-env`** that loads `.env.example` keys list (or a static list in code) and verifies **presence** of required keys when `NODE_ENV=production` **or** when `REQUIRE_FULL_ENV=1`—**do not print values**.
 4. Wire **Next.js** so missing critical env in production fails at **startup** or first server init with a **clear error message** (which variable is missing).
 5. Add **ESLint rule** or **commented grep checklist** in `CONTRIBUTING` fragment: forbid `process.env.ANTHROPIC` / `AWS_SECRET` in files marked `"use client"` or under `app/**/client`—adapt to project structure.
-6. Document in a short **code comment** in `config.ts` that Step 16 may load from **Secrets Manager/SSM** without changing call sites (same env var names in ECS/App Runner).
+6. Document in a short **code comment** in `config.ts` that Step 16 may load from **Secrets Manager/SSM** without changing call sites (same env var names in **App Runner**).
 
 ## Definition of done (testable)
 

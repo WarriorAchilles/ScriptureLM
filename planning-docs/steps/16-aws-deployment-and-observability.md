@@ -4,7 +4,7 @@
 
 ## Manual actions (you must do)
 
-- **Provision AWS**: RDS Postgres with **pgvector**, S3 buckets, IAM roles, **App Runner** or **ECS** service, **VPC** subnets/security groups, **Secrets Manager** or **SSM** parameters for prod secrets.
+- **Provision AWS**: RDS Postgres with **pgvector**, S3 buckets, IAM roles, **App Runner** for the Next.js service (and a **second App Runner** service for the **SQS worker** if you run it separately—same repo/image is fine), **VPC** subnets/security groups plus **App Runner VPC connector** if the app must reach **private RDS**, **Secrets Manager** or **SSM** parameters for prod secrets.
 - **Register** your **GitHub** (or CI) **OIDC** trust in IAM if using OIDC deploys; add repo **secrets** the workflow needs (`AWS_ROLE_ARN`, etc.).
 - Point your **DNS / HTTPS** at the deployed service (platform handles TLS cert or you attach ACM).
 - In **AWS Billing**, create a **budget or cost anomaly alert** for the account or tagged resources (§9).
@@ -12,7 +12,7 @@
 
 ## Instructions for the AI coding agent
 
-1. Add **`Dockerfile`** for Next.js **standalone** output (or documented multi-stage build) suitable for **App Runner / Fargate**; if a **worker** exists, add **second target** or **same image** with different `CMD` (`node worker.js`).
+1. Add **`Dockerfile`** for Next.js **standalone** output (or documented multi-stage build) suitable for **App Runner**; if a **worker** exists, document a **second App Runner** service or **same image** with different `CMD` (`node worker.js`).
 2. Add **`.dockerignore`**; ensure **no `.env`** copied into image (§6.6).
 3. Add **GitHub Actions workflow** (or equivalent) that: lints/tests, builds image, pushes to **ECR** (optional), deploys via **OIDC**—use placeholders for ARNs the human fills in repo secrets.
 4. Document **`DATABASE_URL`**, **`MIGRATE_ON_START=true`** pattern **or** separate **migration job**—pick **one** safe approach; include bash/psql or `npm run db:migrate` in entrypoint script with failure **non-zero** exit. In comments, distinguish **deployed** `DATABASE_URL` (RDS in AWS) from **local dev** (Docker primary, optional dev RDS swap — root `README.md`).
