@@ -6,7 +6,7 @@
 
 - In **AWS**: create an **S3 bucket** for dev with **default encryption** and **block all public access** (§6.6).
 - Create an **IAM user or role** with least privilege: `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` (if needed later) on a **prefix** such as `sources/`.
-- Put **credentials or role ARN** into `.env.local` per `.env.example` (never commit).
+- Put **credentials or role ARN** into `.env` per `.env.example` (never commit).
 - Optionally enable **LocalStack** yourself if you use it; the agent should support **real S3** via env-configured endpoint for simplicity.
 
 ## Instructions for the AI coding agent

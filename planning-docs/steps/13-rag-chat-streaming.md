@@ -4,7 +4,7 @@
 
 ## Manual actions (you must do)
 
-- Add **`ANTHROPIC_API_KEY`** (and optional **`ANTHROPIC_MODEL`**) to **`.env.local`** using your Anthropic console.
+- Add **`ANTHROPIC_API_KEY`** (and optional **`ANTHROPIC_MODEL`**) to **`.env`** using your Anthropic console.
 - Read Anthropic’s **data use / retention** policy for your org and ensure settings match your compliance needs (§6.6)—the agent does not configure your Anthropic account.
 
 ## Instructions for the AI coding agent

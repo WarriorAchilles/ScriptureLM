@@ -5,7 +5,7 @@
 ## Manual actions (you must do)
 
 - In **Bedrock**, ensure **embedding model access** is **Active** in your account/region.
-- Copy **`BEDROCK_EMBEDDING_MODEL_ID`** and confirm **output dimension** into `.env.local` (the agent must read dimension from env or config to size vectors).
+- Copy **`BEDROCK_EMBEDDING_MODEL_ID`** and confirm **output dimension** into `.env` (the agent must read dimension from env or config to size vectors).
 - Attach **IAM policy** allowing **`bedrock:InvokeModel`** (or InvokeModelWithResponseStream if applicable) for that model to the credentials the dev app uses.
 
 ## Instructions for the AI coding agent

@@ -1,12 +1,11 @@
 /**
  * Connectivity check against Postgres using DATABASE_URL (or DATABASE_URL_RDS_DEV with --rds).
- * Loads `.env.local` then `.env` like typical Next.js local setup.
+ * Loads `.env` from the project root (gitignored; copy from `.env.example`).
  */
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
 
-config({ path: resolve(process.cwd(), ".env.local") });
 config({ path: resolve(process.cwd(), ".env") });
 
 const useRds = process.argv.includes("--rds");
@@ -23,7 +22,7 @@ async function main(): Promise<void> {
 
   const url = process.env.DATABASE_URL;
   if (!url?.trim()) {
-    console.error("Missing DATABASE_URL. Copy .env.example to .env.local and set DATABASE_URL.");
+    console.error("Missing DATABASE_URL. Copy .env.example to .env and set DATABASE_URL.");
     process.exit(1);
   }
 

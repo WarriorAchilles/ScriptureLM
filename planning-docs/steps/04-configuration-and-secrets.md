@@ -4,7 +4,7 @@
 
 ## Manual actions (you must do)
 
-- After the agent adds **`.env.example`**, copy it to **`.env.local`** and fill **real secret values** (never commit `.env.local`).
+- After the agent adds **`.env.example`**, copy it to **`.env`** and fill **real secret values** (never commit `.env`).
 - If you use **AWS SSO or named profiles** locally, configure the AWS CLI/SDK credentials the agent documents for Bedrock/S3 in later steps.
 
 ## Instructions for the AI coding agent

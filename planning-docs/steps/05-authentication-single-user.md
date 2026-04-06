@@ -4,7 +4,7 @@
 
 ## Manual actions (you must do)
 
-- If you use **OAuth or Cognito**: create the app/client in the provider console, set **callback URLs** for local and production, and paste **client ID/secret** into `.env.local`.
+- If you use **OAuth or Cognito**: create the app/client in the provider console, set **callback URLs** for local and production, and paste **client ID/secret** into `.env`.
 - If you use **credentials (email/password)** only: choose an initial password and create the first account via the sign-up flow the agent implements, **or** run the documented seed once in dev.
 - Never commit **session secrets** (`AUTH_SECRET` / `NEXTAUTH_SECRET`); generate a long random string locally.
 

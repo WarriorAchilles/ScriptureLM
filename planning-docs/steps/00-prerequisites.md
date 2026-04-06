@@ -6,7 +6,7 @@
 
 - Create or confirm an **AWS account** with permission to use **RDS**, **S3**, **Bedrock** (embeddings), **Secrets Manager** or **SSM**, and **App Runner** (plus **VPC connector** pieces if RDS is private) per §6.2 and §15.
 - Create an **Anthropic** account and ensure you can issue an API key for **Claude** (Messages API) when Step 13 needs it (§6.3).
-- In the **Bedrock** console, **request model access** for **Titan Embeddings** (or the successor you will use). You will copy **model ID**, **region**, and **dimensions** into `.env.local` when the agent wires Step 08.
+- In the **Bedrock** console, **request model access** for **Titan Embeddings** (or the successor you will use). You will copy **model ID**, **region**, and **dimensions** into `.env` when the agent wires Step 08.
 - Install **Node.js** (LTS), **Docker Desktop** (or a compatible engine), and **Git** on the machine where you run the app.
 - **Local database posture (this project):** use **both** — **Docker Postgres + pgvector** for day-to-day development (fast, offline-capable), and optionally a **cloud dev RDS** instance when you need AWS-faithful behavior or shared dev data. The app reads a single active connection string (**`DATABASE_URL`**); put the Docker URL there by default and swap to your RDS URL only when intentionally testing against AWS (see Step 02 and root `README.md`). If you provision **dev RDS**, handle **network access** (security groups, VPN, or tunnel) yourself.
 - Review **content licensing** for corpora you will load (§3.1); the app does not verify rights.

@@ -7,8 +7,8 @@
 ## Manual actions (you must do)
 
 - Install and run **Docker Desktop** (or compatible engine) so `docker compose` works.
-- After the agent adds `.env.example`, copy variables into **`.env.local`** (gitignored). Set **`DATABASE_URL`** to your **Docker** Postgres connection string for normal work (password you chose for compose).
-- **Optional:** If you use **dev RDS**, add its connection string to **`.env.local`** as **`DATABASE_URL_RDS_DEV`** (or copy it over **`DATABASE_URL`** when testing against AWS). Ensure **network access** to RDS from your machine.
+- After the agent adds `.env.example`, copy variables into **`.env`** (gitignored). Set **`DATABASE_URL`** to your **Docker** Postgres connection string for normal work (password you chose for compose).
+- **Optional:** If you use **dev RDS**, add its connection string to **`.env`** as **`DATABASE_URL_RDS_DEV`** (or copy it over **`DATABASE_URL`** when testing against AWS). Ensure **network access** to RDS from your machine.
 
 ## Instructions for the AI coding agent
 
@@ -17,7 +17,7 @@
 3. Add an initial migration (or bootstrap SQL) that runs **`CREATE EXTENSION IF NOT EXISTS vector`**.
 4. Add **`.env.example`** with:
    - **`DATABASE_URL`** — placeholder pointing at **Docker** Postgres (primary local dev).
-   - **`DATABASE_URL_RDS_DEV`** — optional commented placeholder for **cloud dev RDS**; document that the app uses **one** active URL at runtime (`DATABASE_URL`) and developers **copy** `DATABASE_URL_RDS_DEV` → `DATABASE_URL` when switching targets, or use two `.env.local` snippets they comment/uncomment — pick one convention and state it in comments.
+   - **`DATABASE_URL_RDS_DEV`** — optional commented placeholder for **cloud dev RDS**; document that the app uses **one** active URL at runtime (`DATABASE_URL`) and developers **copy** `DATABASE_URL_RDS_DEV` → `DATABASE_URL` when switching targets, or use two `.env` snippets they comment/uncomment — pick one convention and state it in comments.
 5. Add a **small connectivity check**: `scripts/db-check.ts` (or `.mjs`) runnable via `npm run db:check` that connects with **`DATABASE_URL`** and runs `SELECT 1`. Optionally support `npm run db:check:rds` that uses **`DATABASE_URL_RDS_DEV`** when set (skip in CI if unset).
 6. Use a **placeholder embedding dimension** for any vector column only if Step 03 introduces it; if this step stays extension-only, do not add application tables yet beyond what the migration tool requires.
 7. Mention in code comments that **nullable `tenant_id`** on user-owned tables will appear in Step 03 for SaaS evolution (§4.2).

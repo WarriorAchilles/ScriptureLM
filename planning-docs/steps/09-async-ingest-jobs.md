@@ -4,7 +4,7 @@
 
 ## Manual actions (you must do)
 
-- If the agent implements **SQS**: create **queue(s)** in AWS dev, copy **queue URL** into `.env.local`, and grant **`sqs:ReceiveMessage`**, **`DeleteMessage`**, **`SendMessage`**, **`ChangeMessageVisibility`** to the worker role/user.
+- If the agent implements **SQS**: create **queue(s)** in AWS dev, copy **queue URL** into `.env`, and grant **`sqs:ReceiveMessage`**, **`DeleteMessage`**, **`SendMessage`**, **`ChangeMessageVisibility`** to the worker role/user.
 - Run **`npm run worker`** (or Docker worker) in a **second terminal** when testing locally—starting the worker is your ops step, not the agent’s.
 
 ## Instructions for the AI coding agent
