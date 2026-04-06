@@ -1,5 +1,6 @@
-// ScriptureLM — Prisma schema (Step 02: datasource + migrations; app tables in later steps).
-// Nullable tenant_id on user-owned tables will appear in Step 03 for SaaS evolution (spec §4.2).
+// ScriptureLM — core relational schema (planning-docs/steps/03-core-relational-schema.md; master spec §7).
+// v1: at most one Notebook per user and one ChatThread per notebook — enforced by UNIQUE indexes below.
+// Nullable tenant_id: reserved for SaaS evolution (master spec §4.2).
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +11,161 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// No application models yet (Step 02 is extension-only). Step 03+ add tables and relations.
+// --- Auth / workspace ---
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  email       String   @unique
+  authSubject String?  @map("auth_subject")
+  plan        String?
+  /// Optional tenant scope for future multi-tenant SaaS (nullable in v1).
+  tenantId    String?  @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  notebook       Notebook?
+  sourcesCreated Source[] @relation("SourceCreatedBy")
+
+  @@map("users")
+}
+
+/// One row per user in v1 (UNIQUE on user_id). Does not own Source rows — catalog is global.
+model Notebook {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread ChatThread?
+
+  @@map("notebooks")
+}
+
+/// Single thread per notebook in v1 (UNIQUE on notebook_id).
+model ChatThread {
+  id         String   @id @default(uuid()) @db.Uuid
+  notebookId String   @unique @map("notebook_id") @db.Uuid
+  title      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  notebook Notebook  @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@map("chat_threads")
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  threadId       String      @map("thread_id") @db.Uuid
+  role           MessageRole
+  content        String      @db.Text
+  retrievalDebug Json?       @map("retrieval_debug")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@map("messages")
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+// --- Global source catalog (no notebook_id) ---
+
+model Source {
+  id                    String       @id @default(uuid()) @db.Uuid
+  type                  SourceType
+  corpus                SourceCorpus
+  bibleTranslation      String?      @map("bible_translation")
+  bibleBook             String?      @map("bible_book")
+  sermonCatalogId       String?      @map("sermon_catalog_id")
+  storageKey            String?      @map("storage_key")
+  byteSize              BigInt?      @map("byte_size")
+  textExtractionVersion String?      @map("text_extraction_version")
+  status                SourceStatus @default(PENDING)
+  errorMessage          String?      @map("error_message") @db.Text
+  checksum              String?
+  deletedAt             DateTime?    @map("deleted_at")
+  purgeAfter            DateTime?    @map("purge_after")
+  forcePurge            Boolean    @default(false) @map("force_purge")
+  createdById           String?      @map("created_by") @db.Uuid
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+
+  createdBy User?   @relation("SourceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  chunks    Chunk[]
+
+  @@index([status])
+  @@index([corpus])
+  @@index([corpus, status])
+  @@map("sources")
+}
+
+enum SourceType {
+  pdf
+  text
+  markdown
+}
+
+enum SourceCorpus {
+  scripture
+  sermon
+  other
+}
+
+enum SourceStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+/// Embedding dimension 1024 is a placeholder for Bedrock Titan (or successor); Step 08 may adjust via follow-up migration.
+model Chunk {
+  id             String                       @id @default(uuid()) @db.Uuid
+  sourceId       String                       @map("source_id") @db.Uuid
+  content        String                       @db.Text
+  metadata       Json                         @default("{}")
+  embeddingModel String?                      @map("embedding_model")
+  embedding      Unsupported("vector(1024)")? @map("embedding")
+
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+  @@map("chunks")
+}
+
+model Job {
+  id          String    @id @default(uuid()) @db.Uuid
+  type        JobType
+  payload     Json      @default("{}")
+  status      JobStatus @default(PENDING)
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  @@index([status])
+  @@index([type])
+  @@map("jobs")
+}
+
+enum JobType {
+  ingest
+  reindex
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
