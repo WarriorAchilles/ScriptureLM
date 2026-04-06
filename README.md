@@ -15,6 +15,7 @@ The UI and API are a **Next.js** (App Router) app in this repo (see Step 01 in [
 | `npm run build` | Production build |
 | `npm run start` | Run the production server (after `build`) |
 | `npm run lint` | ESLint |
+| `npm run check-env` | When `NODE_ENV=production` or `REQUIRE_FULL_ENV=1`, verify required env vars are set (values are not printed); otherwise no-op |
 | `docker compose up -d` | Start local Postgres + pgvector (Step 02; requires Docker) |
 | `npm run db:migrate:dev` | Apply Prisma migrations to `DATABASE_URL` (first-time / schema changes) |
 | `npm run db:migrate` | Apply migrations (e.g. CI/production-style) |

@@ -8,6 +8,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "check-env": "tsx scripts/check-env.ts",
     "db:check": "tsx scripts/db-check.ts",
     "db:check:rds": "tsx scripts/db-check.ts --rds",
     "db:migrate": "prisma migrate deploy",
