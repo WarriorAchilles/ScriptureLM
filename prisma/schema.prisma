@@ -14,19 +14,27 @@ datasource db {
 // --- Auth / workspace ---
 
 model User {
-  id          String   @id @default(uuid()) @db.Uuid
-  email       String   @unique
-  authSubject String?  @map("auth_subject")
-  plan        String?
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  authSubject  String?   @map("auth_subject")
+  /// Bcrypt hash for Credentials sign-in; null for OAuth-only accounts.
+  passwordHash String?   @map("password_hash")
+  plan         String?
   /// Optional tenant scope for future multi-tenant SaaS (nullable in v1).
-  tenantId    String?  @map("tenant_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  tenantId     String?   @map("tenant_id") @db.Uuid
+  role         UserRole  @default(user)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   notebook       Notebook?
   sourcesCreated Source[] @relation("SourceCreatedBy")
 
   @@map("users")
+}
+
+enum UserRole {
+  user
+  admin
 }
 
 /// One row per user in v1 (UNIQUE on user_id). Does not own Source rows — catalog is global.

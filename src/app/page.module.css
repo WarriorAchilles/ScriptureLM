@@ -28,3 +28,14 @@
   line-height: 1.6;
   color: color-mix(in srgb, var(--foreground) 72%, transparent);
 }
+
+.links {
+  margin-top: 1.5rem;
+  font-size: 0.9375rem;
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
+}
+
+.links a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
