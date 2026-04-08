@@ -15,7 +15,7 @@
    - **`chunkText(normalized, options)`** — fixed window + overlap **or** paragraph-based splitting; include **`chunk_index`** stable ordering. For **scripture-shaped** content, optional verse-line splitting behind a flag; default to simple windows if ambiguous (§12 #1).
 2. **`runExtractAndChunk(sourceId)`** pipeline:
    - Load `Source` from DB; **skip** if `deleted_at` set.
-   - Download bytes from S3 (Step 06 helper).
+   - Read bytes from **blob storage** via the Step 06 storage helper (filesystem or S3, depending on `STORAGE_BACKEND`).
    - Extract → normalize → chunk → **delete existing chunks** for that `source_id` then **insert** new rows (idempotent re-run).
    - Set **`Source.status`** to `failed` with **`error_message`** on throw; on success leave **`pending`** for embedding step **or** set intermediate state documented in code—**must** align with Step 08/09 (if chunks exist without embeddings, define `chunks_ready` vs `ready`; document one scheme).
 3. Attach **metadata JSON** per chunk: `source_id`, `chunk_index`, optional `page`, **`corpus`** copied from Source, **`bible_book`** from Source metadata column if present, sermon id from filename regex if available.

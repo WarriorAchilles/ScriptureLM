@@ -2,7 +2,7 @@
 
 **Document purpose:** Single source of truth for project scope, architecture direction, and implementation boundaries. Detailed implementation plans and tickets will be derived from this file later.
 
-**Last updated:** 2025-03-26 (architecture decisions recorded in §15)
+**Last updated:** 2026-04-07 (architecture decisions recorded in §15; local-first blob storage in §6 / §15)
 
 ---
 
@@ -18,7 +18,7 @@ The Greek **Logos** (*λόγος*) remains the thematic backdrop: **Word**, **re
 
 ## 1. Vision and summary
 
-Build a **theological and doctrinal research workspace** (inspired by Google NotebookLM) where **every user** draws on the **same admin-curated source library**, **chats with it using retrieval-augmented generation (RAG)**, and **generates summaries grounded in those sources**. End users **do not** upload their own documents; they **browse** the catalog and **scope** queries to all or part of it. The initial deployment target is **AWS**, usage is **single-user (you)** for early deployment, and the primary model is **Anthropic Claude** for both chat and summarization.
+Build a **theological and doctrinal research workspace** (inspired by Google NotebookLM) where **every user** draws on the **same admin-curated source library**, **chats with it using retrieval-augmented generation (RAG)**, and **generates summaries grounded in those sources**. End users **do not** upload their own documents; they **browse** the catalog and **scope** queries to all or part of it. **Development is local-first:** run Next.js, Postgres (Docker), and **source files on disk** without AWS (see §6). **Production deployment** targets **AWS** (App Runner, RDS, S3, etc.); usage is **single-user (you)** for early deployment. The primary model is **Anthropic Claude** for both chat and summarization.
 
 ### 1.1 Anchor corpus (shared library)
 
@@ -43,7 +43,7 @@ The system should be designed so that **scaling to multi-tenant SaaS** is possib
 | **RAG chat** | User asks questions; answers cite or are clearly grounded in retrieved chunks from sources. |
 | **Source-grounded summarization** | Produce summaries (full doc, section-level, or **library overview**) with explicit ties to source content. |
 | **File types (v1)** | **PDF**, **plain text**, and **Markdown** as first-class **admin ingest** paths (operators add material to the shared catalog). |
-| **Familiar stack** | **React + Next.js** frontend; **AWS** for hosting and data services. |
+| **Familiar stack** | **React + Next.js** frontend; **local** Postgres + filesystem blobs for development; **AWS** for production hosting and managed data services when deployed (see §6.2). |
 | **Claude-first** | **Anthropic Claude** for generation (chat, summaries, optional structuring). Embeddings may use a separate model/service (see §6.3). |
 | **Doctrinal Q&A over defined corpora** | Answers must be **grounded in the Bible and Branham transcripts in the shared catalog**; the UI and RAG layer should support **clear attribution** (which book, chapter, sermon, etc., when present in source metadata or extract). |
 
@@ -104,9 +104,9 @@ Design **data isolation** and **resource accounting** up front so you do not pai
 - **Canonical content:** the **full Bible** and the **~1,200 sermon transcript** set are the flagship entries; additional admin-added works use the same **Source** / ingest mechanics.
 - **Source list UX (end user):** **read-only** browse—**name, corpus tag** (`scripture` | `sermon` | `other`), **indexing status**, and enough identity (e.g. sermon title, Bible translation) to **select** sources for chat scope (§5.1). No delete/rename for ordinary users.
 - **Extract text** reliably from PDFs **that already contain extractable text** (v1 **does not** target scanned/OCR PDFs; see §15).
-- **Store originals** in object storage for reprocessing and audit (admin-only write access at the infrastructure layer where applicable).
+- **Store originals** in **blob storage** (local filesystem in development, **Amazon S3** in production—see §15) for reprocessing and audit (admin-only write access at the infrastructure layer where applicable).
 - **Re-index:** operators trigger **per-source or full-catalog** reindex when extraction/chunking/embedding changes (with clear progress and pipeline version metadata).
-- **Remove / deprecate source (operator-only):** use **scheduled deletion** (see §15): **soft-delete / hide** from catalog and queries immediately, record **scheduled hard-purge time** (rollback window), run a job to **purge** vectors + S3 at that time; operators can **force-delete** immediately to bypass the schedule when needed.
+- **Remove / deprecate source (operator-only):** use **scheduled deletion** (see §15): **soft-delete / hide** from catalog and queries immediately, record **scheduled hard-purge time** (rollback window), run a job to **purge** vectors + **stored blobs** (local files or S3 objects, depending on environment) at that time; operators can **force-delete** immediately to bypass the schedule when needed.
 
 ### 5.3 Chat (RAG)
 
@@ -126,7 +126,7 @@ Design **data isolation** and **resource accounting** up front so you do not pai
 
 ### 5.5 Operator / admin operations (no admin UI in v1)
 
-- **Source management** is done via **CLI, scripts, one-off jobs, or protected internal API routes**—**not** a dedicated operator web UI for MVP (see §15). Operators add/update/remove catalog entries, upload or register files in S3, trigger **ingest and reindex**, and inspect **per-job failures** / retry from the terminal or automation.
+- **Source management** is done via **CLI, scripts, one-off jobs, or protected internal API routes**—**not** a dedicated operator web UI for MVP (see §15). Operators add/update/remove catalog entries, **upload or register files in configured blob storage** (filesystem locally, S3 in production), trigger **ingest and reindex**, and inspect **per-job failures** / retry from the terminal or automation.
 - **Access control:** operator entrypoints **must not** be exposed to normal end users (network isolation, secrets, IAM, or auth middleware); audit log of catalog changes (recommended).
 - **Platform ops (solo MVP):** export or backup data (document list + blob export; full backup strategy can be phased).
 
@@ -136,24 +136,28 @@ Design **data isolation** and **resource accounting** up front so you do not pai
 
 **Deployment posture (v1):** **monolith**—Next.js application owns HTTP UI + API, with optional **background worker in the same codebase** (e.g. SQS consumer in a second process/container from the same repo) rather than splitting into separate microservices (see §15).
 
+**Local-first development vs production:** For day-to-day development, the **full stack** can run **without AWS**: **Next.js**, **Postgres + pgvector** (Docker), and **source file blobs** on a **local filesystem** under a configurable root (typically gitignored). **Amazon S3** is the **production** (and optional staging) backend for originals. Implementation uses a **storage abstraction** (see §15): **filesystem** backend locally, **S3** backend in AWS, sharing the same logical **`storage_key`** / key naming.
+
 ### 6.1 High-level components
 
 1. **Web app (Next.js)** — UI, auth session, server actions or API routes for CRUD.
 2. **Ingestion pipeline** — parse PDF/text/md, normalize text, chunk, embed, upsert vectors.
 3. **Retrieval service** — embedding query, vector search, optional re-ranking (future), assemble context window.
 4. **LLM orchestration** — call Claude with system prompts, tools (if any), and retrieved context.
-5. **Persistence** — relational metadata, object storage for files, vector store for chunks.
+5. **Persistence** — relational metadata, **blob storage** for original files (local filesystem or S3—see §15), vector store for chunks.
 6. **Async jobs** — queue workers for ingest/embed (avoid blocking admin uploads or bulk ingest requests).
 
 ### 6.2 Recommended AWS mapping (illustrative)
 
 **Recorded default (§15):** favor the **simplest AWS-native** stack for an operator new to vector DBs. **Compute** defaults to **AWS App Runner** (see §15); **ECS Fargate** remains an option if you later need fuller VPC orchestration or patterns App Runner does not support.
 
+**Development:** originals live on the **local filesystem** (not S3). **Production:** use the AWS options below.
+
 | Concern | AWS option |
 |--------|------------|
 | Compute (Next.js) | **AWS App Runner** — containerized Next.js (default per §15). **ECS Fargate** is an alternative for heavier VPC/service-mesh needs. **Lambda + API Gateway** is possible but can complicate long-running ingest and websockets/streaming. |
-| Database (metadata **and** vectors) | **Amazon RDS (PostgreSQL) + pgvector** — one managed service for relational data and embeddings; minimal moving parts versus OpenSearch. |
-| Object storage | **Amazon S3** — originals + optional extracted text artifacts. |
+| Database (metadata **and** vectors) | **Amazon RDS (PostgreSQL) + pgvector** — one managed service for relational data and embeddings; minimal moving parts versus OpenSearch. *(Local dev: Docker Postgres + pgvector.)* |
+| Object storage | **Production:** **Amazon S3** — originals + optional extracted text artifacts. **Local development:** filesystem under **`SOURCE_STORAGE_ROOT`** (or equivalent); same logical keys as S3 object keys. Implementation: small module with **filesystem** and **S3** backends (see §15). **Optional:** S3-compatible endpoint (e.g. MinIO, LocalStack) to exercise the S3 code path without a real bucket. |
 | Embeddings | **Amazon Bedrock** (e.g. **Amazon Titan Embeddings**) — stay in-region with RDS; confirm current model ID, dimensions, and quotas at implementation time. |
 | Async jobs | **SQS** + worker on **App Runner** (second service or same image with different `CMD`) **or** lightweight **Step Functions** for orchestration if pipelines grow. |
 | Auth (future-ready) | **Amazon Cognito** or **Auth.js** with credentials in RDS — Cognito if SaaS is likely. |
@@ -161,7 +165,7 @@ Design **data isolation** and **resource accounting** up front so you do not pai
 | Observability | **CloudWatch** logs/metrics; optional **X-Ray** later. |
 | CDN | **CloudFront** in front of **App Runner** as traffic grows (use an **Application Load Balancer** only if you adopt ECS or another target that requires it). |
 
-**Single-tenancy shortcut for MVP:** One VPC, one RDS instance, one bucket with prefix isolation—even if you only use one prefix.
+**Single-tenancy shortcut for MVP:** One VPC, one RDS instance, one bucket with prefix isolation—even if you only use one prefix. **Local dev:** one **`SOURCE_STORAGE_ROOT`** directory instead of a bucket.
 
 ### 6.3 Models and APIs
 
@@ -171,7 +175,7 @@ Design **data isolation** and **resource accounting** up front so you do not pai
 
 ### 6.4 RAG pipeline (conceptual)
 
-1. **Admin ingest** (upload or pipeline) → persist to S3 → record **global** `Source` row (`pending`).
+1. **Admin ingest** (upload or pipeline) → persist bytes to **configured blob storage** (filesystem locally, S3 in production) → record **global** `Source` row (`pending`).
 2. **Extract** text (PDF library or managed extractor; **v1 assumes text-based PDFs**, no OCR pipeline).
 3. **Normalize** (strip excessive whitespace, preserve structure for md).
 4. **Chunk** with overlap; attach metadata: `source_id`, `filename`, `page` (if PDF), `chunk_index`, and **corpus tags** (e.g. `scripture` | `sermon` | `other`) plus **structured locators** where known. **Scripture:** one **Source** row **per Bible book** (KJV); `bible_book` + chapter/verse metadata as available. **Sermons:** `sermon_id` or `preached_date` from filenames or front-matter. Chunks are **not** duplicated per user.
@@ -189,10 +193,10 @@ Design **data isolation** and **resource accounting** up front so you do not pai
 
 ### 6.6 Security and privacy
 
-- **Encryption at rest** for S3 and RDS; TLS in transit everywhere.
+- **Encryption at rest** for **S3 and RDS in production**; **filesystem permissions** and full-disk encryption for local dev blobs; TLS in transit everywhere for deployed services.
 - **No Anthropic training** on your API traffic by default (confirm current Anthropic data policies in implementation docs).
 - **Secrets** never committed; CI uses OIDC to AWS where possible.
-- **SaaS path:** per-tenant KMS keys (optional), row-level security in Postgres, strict S3 prefix ACLs/IAM.
+- **SaaS path:** per-tenant KMS keys (optional), row-level security in Postgres, strict S3 prefix ACLs/IAM for production object storage.
 
 ---
 
@@ -233,7 +237,7 @@ Vector store may mirror **Chunk** identifiers for joins.
 | Phase | Outcome |
 |-------|---------|
 | **Phase 0 — Spike** | Extract text from PDF + md, chunk, embed with chosen stack; prove end-to-end RAG Q&A via CLI or minimal UI. |
-| **Phase 1 — MVP web** | Next.js UI, **shared catalog** (read-only in app) + **admin ingest** path + **source-scoped** chat + streaming + basic summaries; AWS deploy. |
+| **Phase 1 — MVP web** | Next.js UI, **shared catalog** (read-only in app) + **admin ingest** path + **source-scoped** chat + streaming + basic summaries; **runnable end-to-end locally** (Postgres + filesystem blobs); **deploy to AWS** when ready (Step 16). |
 | **Phase 2 — Hardening** | Better **inline** citations UX, failure/retry UX, backups, eval harness, rate limits; operator workflows can stay **CLI-first** or gain UI if needed. |
 | **Phase 3 — SaaS foundations** | Cognito, multi-tenant schema enforcement, billing, **operator** console hardening (audit, roles). |
 
@@ -273,7 +277,8 @@ Vector store may mirror **Chunk** identifiers for joins.
 - Ask **doctrine- and text-based questions** and receive answers that **reference Scripture and/or specific sermons** as retrieved; answers **gracefully degrade** when the corpus has no relevant passage.
 - Optionally restrict chat to **Scripture-only** or **sermons-only** and still get coherent retrieval (filters work end-to-end).
 - Generate a **source summary** and a **library overview** that are **usefully grounded** and reproducible with the same inputs.
-- Deployed on **AWS** with **reasonable operational friction** (logs, retries, basic alarms).
+- **Full local operation** during development: catalog, ingest from **local blob storage**, RAG chat, and summaries against **Docker Postgres**—without requiring AWS or S3 for source files.
+- **Production:** deployed on **AWS** with **reasonable operational friction** (logs, retries, basic alarms), **S3** for originals, and managed RDS as per §6.2.
 - Codebase structured so **tenant_id** and per-tenant quotas can be added without a full rewrite.
 
 ---
@@ -299,7 +304,8 @@ Implementation breakdowns may include: `architecture-decisions.md`, `rag-pipelin
 | 6 | **Citation presentation** | **Inline citations** in model replies (human-readable references next to claims). |
 | 7 | **Hybrid search** | **Not decided** — start **vector-only**; add hybrid if eval shows need (see §12). |
 | 8 | **PDFs** | **Text-native PDFs only** in v1; **no OCR** scope for MVP. |
-| 9 | **Source deletion** | **Soft-delete / hide** immediately; **scheduled `purge_after`** for hard delete (vectors + S3); **operator force-delete** bypasses the wait when required. |
+| 9 | **Source deletion** | **Soft-delete / hide** immediately; **scheduled `purge_after`** for hard delete (**vectors + blob storage**: local files or S3 objects, depending on environment); **operator force-delete** bypasses the wait when required. |
+| 11 | **Source blob storage** | **Development:** local filesystem under **`SOURCE_STORAGE_ROOT`** (or equivalent); **Production:** **Amazon S3** with IAM. **Optional:** S3-compatible endpoint (MinIO, LocalStack) for integration tests that exercise the S3 code path without a real bucket. Same logical **`storage_key`** / key naming for both backends. |
 
 ---
 

@@ -4,7 +4,8 @@
 
 ## Manual actions (you must do)
 
-- **Provision AWS**: RDS Postgres with **pgvector**, S3 buckets, IAM roles, **App Runner** for the Next.js service (and a **second App Runner** service for the **SQS worker** if you run it separately—same repo/image is fine), **VPC** subnets/security groups plus **App Runner VPC connector** if the app must reach **private RDS**, **Secrets Manager** or **SSM** parameters for prod secrets.
+- **Cutover from local dev:** development uses **filesystem** blob storage under **`SOURCE_STORAGE_ROOT`** (Step 06). For production, **provision S3**, set **`STORAGE_BACKEND=s3`** (or equivalent), point **`S3_BUCKET`** and IAM at the new bucket, and migrate or re-upload source objects as needed; **RDS** replaces Docker Postgres via **`DATABASE_URL`**.
+- **Provision AWS**: RDS Postgres with **pgvector**, **S3 buckets** (production originals), IAM roles, **App Runner** for the Next.js service (and a **second App Runner** service for the **SQS worker** if you run it separately—same repo/image is fine), **VPC** subnets/security groups plus **App Runner VPC connector** if the app must reach **private RDS**, **Secrets Manager** or **SSM** parameters for prod secrets.
 - **Register** your **GitHub** (or CI) **OIDC** trust in IAM if using OIDC deploys; add repo **secrets** the workflow needs (`AWS_ROLE_ARN`, etc.).
 - Point your **DNS / HTTPS** at the deployed service (platform handles TLS cert or you attach ACM).
 - In **AWS Billing**, create a **budget or cost anomaly alert** for the account or tagged resources (§9).

@@ -9,6 +9,8 @@ Each step (except **00**) is structured for a **human owner** plus an **AI codin
 
 **Local database (default for this repo):** Day-to-day development targets **Postgres + pgvector in Docker** (`docker compose`). Optionally use a **cloud dev RDS** instance with the same migrations; the app uses **`DATABASE_URL`** — keep Docker there by default and swap to RDS only when you need AWS-parity checks. Details: root [`README.md`](../../README.md), Step [00](./00-prerequisites.md), Step [02](./02-local-postgres-pgvector.md).
 
+**Local source files (default for this repo):** Catalog originals live on the **local filesystem** under **`SOURCE_STORAGE_ROOT`** (Step [06](./06-source-blob-storage.md)) during development; **Amazon S3** is the production backend after deploy (Step [16](./16-aws-deployment-and-observability.md)).
+
 | Step | Focus |
 |------|--------|
 | [00-prerequisites.md](./00-prerequisites.md) | Accounts, tools, and decisions before implementation |
@@ -17,7 +19,7 @@ Each step (except **00**) is structured for a **human owner** plus an **AI codin
 | [03-core-relational-schema.md](./03-core-relational-schema.md) | Metadata tables per logical model |
 | [04-configuration-and-secrets.md](./04-configuration-and-secrets.md) | Safe configuration boundaries |
 | [05-authentication-single-user.md](./05-authentication-single-user.md) | Protected workspace for one user |
-| [06-s3-and-source-storage.md](./06-s3-and-source-storage.md) | Object storage + `Source` persistence |
+| [06-source-blob-storage.md](./06-source-blob-storage.md) | Source blob storage (local filesystem + S3) + `Source` persistence |
 | [07-ingest-extract-chunk.md](./07-ingest-extract-chunk.md) | Text extraction and chunking |
 | [08-embeddings-pgvector-upsert.md](./08-embeddings-pgvector-upsert.md) | Bedrock embeddings + vector rows |
 | [09-async-ingest-jobs.md](./09-async-ingest-jobs.md) | Durable ingest/reindex jobs |

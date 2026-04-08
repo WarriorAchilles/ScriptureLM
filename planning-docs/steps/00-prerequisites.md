@@ -4,7 +4,7 @@
 
 ## Manual actions (you must do)
 
-- Create or confirm an **AWS account** with permission to use **RDS**, **S3**, **Bedrock** (embeddings), **Secrets Manager** or **SSM**, and **App Runner** (plus **VPC connector** pieces if RDS is private) per §6.2 and §15.
+- **Local development** does **not** require an AWS account for **source file storage**: use a **local directory** (Step 06, **`SOURCE_STORAGE_ROOT`**) and **Docker Postgres** (Step 02). Create or confirm an **AWS account** when you are ready for **production deployment** (Step 16) or when you use **managed AWS services**—**RDS**, **S3** (production blobs), **Bedrock** (embeddings), **Secrets Manager** or **SSM**, and **App Runner** (plus **VPC connector** pieces if RDS is private) per §6.2 and §15.
 - Create an **Anthropic** account and ensure you can issue an API key for **Claude** (Messages API) when Step 13 needs it (§6.3).
 - In the **Bedrock** console, **request model access** for **Titan Embeddings** (or the successor you will use). You will copy **model ID**, **region**, and **dimensions** into `.env` when the agent wires Step 08.
 - Install **Node.js** (LTS), **Docker Desktop** (or a compatible engine), and **Git** on the machine where you run the app.
@@ -19,5 +19,5 @@
 ## Definition of done (testable)
 
 - `node -v` and `docker version` succeed on your machine.
-- You can sign in to **Anthropic** and **AWS Bedrock** consoles without access errors.
-- You have read the master spec sections above and accept **§15** decisions (pgvector + Titan embeddings, KJV per-book sources, no admin web UI in v1, single chat thread, inline citations, text-native PDFs only, soft-delete + scheduled purge for sources).
+- You can access **Anthropic** for Claude. Before using **Bedrock embeddings** (Step 08), you can sign in to the **AWS Bedrock** console and complete model access for **Titan Embeddings** (or skip until you enable that step).
+- You have read the master spec sections above and accept **§15** decisions (pgvector + Titan embeddings, **local filesystem blobs in dev + S3 in production** (§15 #11), KJV per-book sources, no admin web UI in v1, single chat thread, inline citations, text-native PDFs only, soft-delete + scheduled purge for sources).
