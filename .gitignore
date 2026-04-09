@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/data
+# Source blobs (Step 06); set SOURCE_STORAGE_ROOT to this path or another dir outside the repo.
+/data/sources

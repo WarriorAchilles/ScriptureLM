@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "check-env": "tsx scripts/check-env.ts",
+    "register-source": "tsx scripts/register-source.ts",
     "db:check": "tsx scripts/db-check.ts",
     "db:check:rds": "tsx scripts/db-check.ts --rds",
     "db:migrate": "prisma migrate deploy",
@@ -22,6 +23,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1026.0",
     "@prisma/client": "^6.19.0",
     "bcrypt": "^6.0.0",
     "next": "16.2.1",

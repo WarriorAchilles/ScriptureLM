@@ -10,10 +10,18 @@
  * them into the process environment as today.
  */
 
+export type StorageBackend = "filesystem" | "s3";
+
 export type ServerEnv = Readonly<{
   databaseUrl: string;
   /** Optional reference URL; app runtime still uses `databaseUrl` only (see README). */
   databaseUrlRdsDev: string;
+  /** Where raw source blobs are stored (Step 06). */
+  storageBackend: StorageBackend;
+  /** Required when `storageBackend` is `filesystem`; absolute path to blob root. */
+  sourceStorageRoot: string;
+  /** Optional custom S3 API endpoint (LocalStack, MinIO). */
+  s3Endpoint: string;
   awsRegion: string;
   s3Bucket: string;
   bedrockEmbeddingModelId: string;
@@ -75,6 +83,21 @@ function resolveAuthSecret(): string {
   );
 }
 
+/**
+ * Blob storage for source files (Step 06). When unset: `filesystem` in development/test,
+ * `s3` in production builds (aligns with typical AWS deploy).
+ */
+export function resolveStorageBackend(): StorageBackend {
+  const raw = trimOrEmpty(process.env.STORAGE_BACKEND).toLowerCase();
+  if (raw === "filesystem") {
+    return "filesystem";
+  }
+  if (raw === "s3") {
+    return "s3";
+  }
+  return process.env.NODE_ENV === "production" ? "s3" : "filesystem";
+}
+
 function missingName(name: string): Error {
   return new Error(`Missing required environment variable: ${name}`);
 }
@@ -104,6 +127,14 @@ export function assertStrictServerEnv(): void {
   );
   assertNonEmpty("OPERATOR_INGEST_SECRET", trimOrEmpty(process.env.OPERATOR_INGEST_SECRET));
 
+  const blobBackend = resolveStorageBackend();
+  if (blobBackend === "filesystem") {
+    assertNonEmpty(
+      "SOURCE_STORAGE_ROOT",
+      trimOrEmpty(process.env.SOURCE_STORAGE_ROOT),
+    );
+  }
+
   const authSecret = resolveAuthSecret();
   if (!authSecret) {
     throw missingName("AUTH_SECRET (or NEXTAUTH_SECRET as fallback)");
@@ -125,6 +156,9 @@ function buildServerEnv(): ServerEnv {
   return {
     databaseUrl: trimOrEmpty(process.env.DATABASE_URL),
     databaseUrlRdsDev: trimOrEmpty(process.env.DATABASE_URL_RDS_DEV),
+    storageBackend: resolveStorageBackend(),
+    sourceStorageRoot: trimOrEmpty(process.env.SOURCE_STORAGE_ROOT),
+    s3Endpoint: trimOrEmpty(process.env.S3_ENDPOINT_URL),
     awsRegion: trimOrEmpty(process.env.AWS_REGION),
     s3Bucket: trimOrEmpty(process.env.S3_BUCKET),
     bedrockEmbeddingModelId: trimOrEmpty(process.env.BEDROCK_EMBEDDING_MODEL_ID),
@@ -141,6 +175,13 @@ function buildServerEnv(): ServerEnv {
 }
 
 let cachedEnv: ServerEnv | undefined;
+let strictStartupValidated = false;
+
+/** Clears cached env (for tests that mutate `process.env`). */
+export function resetServerEnvCacheForTests(): void {
+  cachedEnv = undefined;
+  strictStartupValidated = false;
+}
 
 /**
  * Parsed, typed server environment. In `production` or when `REQUIRE_FULL_ENV=1`, all
@@ -159,8 +200,6 @@ export function getServerEnv(): ServerEnv {
   cachedEnv = buildServerEnv();
   return cachedEnv;
 }
-
-let strictStartupValidated = false;
 
 /** Next.js instrumentation entry: no-op in edge; validates once in Node when strict. */
 export function assertStrictServerEnvOnStartup(): void {
