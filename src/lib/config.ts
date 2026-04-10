@@ -25,6 +25,8 @@ export type ServerEnv = Readonly<{
   awsRegion: string;
   s3Bucket: string;
   bedrockEmbeddingModelId: string;
+  /** Must match `chunks.embedding` column width and Titan `dimensions` (Step 08). */
+  embeddingDimensions: number;
   anthropicApiKey: string;
   /** Session / JWT signing (Auth.js); `NEXTAUTH_SECRET` is still read as fallback. */
   authSecret: string;
@@ -108,6 +110,20 @@ function assertNonEmpty(name: string, value: string): void {
   }
 }
 
+function parseEmbeddingDimensions(): number {
+  const raw = trimOrEmpty(process.env.EMBEDDING_DIMENSIONS);
+  if (!raw) {
+    return 1024;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(
+      "Invalid EMBEDDING_DIMENSIONS: must be a positive integer (e.g. 1024 for Titan Text Embeddings v2).",
+    );
+  }
+  return parsed;
+}
+
 /**
  * Throws with a clear message (variable name or credential guidance) if strict mode
  * requirements are not met. Safe to call from instrumentation and check-env.
@@ -162,6 +178,7 @@ function buildServerEnv(): ServerEnv {
     awsRegion: trimOrEmpty(process.env.AWS_REGION),
     s3Bucket: trimOrEmpty(process.env.S3_BUCKET),
     bedrockEmbeddingModelId: trimOrEmpty(process.env.BEDROCK_EMBEDDING_MODEL_ID),
+    embeddingDimensions: parseEmbeddingDimensions(),
     anthropicApiKey: trimOrEmpty(process.env.ANTHROPIC_API_KEY),
     authSecret: resolveAuthSecret(),
     operatorIngestSecret: trimOrEmpty(process.env.OPERATOR_INGEST_SECRET),
