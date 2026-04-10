@@ -22,6 +22,8 @@
 
 import { createWriteStream } from "node:fs";
 import { mkdir, stat } from "node:fs/promises";
+import { Readable } from "node:stream";
+import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { pipeline } from "node:stream/promises";
 import { resolve } from "node:path";
 
@@ -411,7 +413,10 @@ async function downloadPdfToFile(
   if (!response.body) {
     throw new Error("PDF response had no body");
   }
-  await pipeline(response.body, createWriteStream(destinationPath));
+  await pipeline(
+    Readable.fromWeb(response.body as unknown as WebReadableStream),
+    createWriteStream(destinationPath),
+  );
 }
 
 async function main(): Promise<void> {

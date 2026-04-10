@@ -1,0 +1,2 @@
+Plain text fixture for ingest tests.
+Second line.
