@@ -2,7 +2,7 @@
   "name": "scripturelm",
   "version": "0.1.0",
   "private": true,
-  "description": "NotebookLM-style app (Next.js monolith). Future background worker entry: src/worker/index.ts, sharing code via src/lib (planning-docs NOTEBOOKLM-CLONE-MASTER-SPEC.md §6.1).",
+  "description": "NotebookLM-style app (Next.js monolith). Background worker: `npm run worker` (src/worker/index.ts).",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -18,6 +18,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "worker": "tsx src/worker/index.ts",
+    "jobs:enqueue": "tsx scripts/jobs-enqueue.ts",
+    "jobs:list": "tsx scripts/jobs-list.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate"
@@ -28,6 +31,7 @@
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1028.0",
     "@aws-sdk/client-s3": "^3.1026.0",
+    "@aws-sdk/client-sqs": "^3.1029.0",
     "@prisma/client": "^6.19.0",
     "bcrypt": "^6.0.0",
     "next": "16.2.1",

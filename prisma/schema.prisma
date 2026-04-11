@@ -156,9 +156,12 @@ model Job {
   payload     Json      @default("{}")
   status      JobStatus @default(PENDING)
   attempts    Int       @default(0)
+  /// Set when a run fails (operator / jobs:list); cleared on success.
+  lastError   String?   @map("last_error") @db.Text
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   startedAt   DateTime? @map("started_at")
+  /// Wall-clock end of terminal states (success or failure).
   completedAt DateTime? @map("completed_at")
 
   @@index([status])
