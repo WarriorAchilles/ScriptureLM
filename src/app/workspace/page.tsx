@@ -23,8 +23,13 @@ export default async function WorkspacePage() {
       <main className={styles.main}>
         <h1 className={styles.title}>Workspace</h1>
         <p className={styles.lead}>
-          Signed in as {session.user.email ?? session.user.id}. Chat arrives in a
-          later step — for now you can browse the shared source catalog.
+          Signed in as {session.user.email ?? session.user.id}. Start a
+          conversation or browse the shared source catalog.
+        </p>
+        <p className={styles.lead}>
+          <Link href="/workspace/chat" className={styles.inlineLink}>
+            Open chat →
+          </Link>
         </p>
         <p className={styles.lead}>
           <Link href="/workspace/sources" className={styles.inlineLink}>
