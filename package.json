@@ -10,6 +10,7 @@
     "lint": "eslint",
     "check-env": "tsx scripts/check-env.ts",
     "register-source": "tsx scripts/register-source.ts",
+    "bulk-ingest-markdown": "tsx scripts/bulk-ingest-markdown.ts",
     "ingest:chunk": "tsx scripts/ingest-chunk.ts",
     "download-vgr-pdfs": "tsx scripts/download-vgr-sermon-pdfs.ts",
     "branham-pdfs-to-md": "tsx scripts/branham-pdfs-to-markdown.ts",
