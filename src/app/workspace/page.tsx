@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOutAction } from "@/app/actions/sign-out";
 import styles from "@/app/workspace/workspace.module.css";
@@ -22,8 +23,13 @@ export default async function WorkspacePage() {
       <main className={styles.main}>
         <h1 className={styles.title}>Workspace</h1>
         <p className={styles.lead}>
-          Signed in as {session.user.email ?? session.user.id}. Sources and chat
-          will appear in later steps — this is your empty shell.
+          Signed in as {session.user.email ?? session.user.id}. Chat arrives in a
+          later step — for now you can browse the shared source catalog.
+        </p>
+        <p className={styles.lead}>
+          <Link href="/workspace/sources" className={styles.inlineLink}>
+            View source catalog →
+          </Link>
         </p>
       </main>
     </div>

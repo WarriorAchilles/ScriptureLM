@@ -1,0 +1,267 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  padding: 2rem 1.5rem 3rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 1.75rem;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  margin-bottom: 0.25rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  margin-bottom: 0.4rem;
+}
+
+.lead {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  max-width: 44rem;
+}
+
+.backLink {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.backLink:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.main {
+  flex: 1;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  margin-bottom: 0.75rem;
+}
+
+.tableWrap {
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.caption {
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  text-align: left;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  background: transparent;
+  caption-side: top;
+}
+
+.table thead th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.table tbody tr {
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody td,
+.table tbody th {
+  padding: 0.85rem 1rem;
+  vertical-align: top;
+  text-align: left;
+  font-weight: 400;
+}
+
+.titleCell {
+  font-weight: 500;
+  color: var(--foreground);
+  max-width: 28rem;
+}
+
+.detailsCell {
+  max-width: 22rem;
+}
+
+.muted {
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+.corpus {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 999px;
+  text-transform: lowercase;
+  border: 1px solid transparent;
+}
+
+.corpusScripture {
+  background: color-mix(in srgb, #4f46e5 14%, transparent);
+  color: color-mix(in srgb, #4f46e5 85%, var(--foreground));
+  border-color: color-mix(in srgb, #4f46e5 28%, transparent);
+}
+
+.corpusSermon {
+  background: color-mix(in srgb, #0f766e 14%, transparent);
+  color: color-mix(in srgb, #0f766e 88%, var(--foreground));
+  border-color: color-mix(in srgb, #0f766e 28%, transparent);
+}
+
+.corpusOther {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: color-mix(in srgb, var(--foreground) 75%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badgeDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.badgeReady {
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: color-mix(in srgb, #16a34a 85%, var(--foreground));
+  border-color: color-mix(in srgb, #16a34a 28%, transparent);
+}
+
+.badgeFailed {
+  background: color-mix(in srgb, #dc2626 14%, transparent);
+  color: color-mix(in srgb, #dc2626 85%, var(--foreground));
+  border-color: color-mix(in srgb, #dc2626 32%, transparent);
+}
+
+.badgePending {
+  background: color-mix(in srgb, #d97706 14%, transparent);
+  color: color-mix(in srgb, #d97706 88%, var(--foreground));
+  border-color: color-mix(in srgb, #d97706 30%, transparent);
+}
+
+.errorSnippet {
+  display: inline-block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, #dc2626 80%, var(--foreground));
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.empty {
+  padding: 2rem 1.5rem;
+  border: 1px dashed color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 0.35rem;
+}
+
+.emptyBody {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  max-width: 34rem;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+.pageNav {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pageLink {
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 0.95rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  color: var(--foreground);
+}
+
+.pageLink:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.pageLink:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.pageFoot {
+  margin-top: 1.25rem;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  text-align: right;
+  min-height: 1rem;
+}

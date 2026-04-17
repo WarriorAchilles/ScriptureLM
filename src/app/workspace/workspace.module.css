@@ -52,4 +52,21 @@
   font-size: 1rem;
   line-height: 1.6;
   color: color-mix(in srgb, var(--foreground) 72%, transparent);
+  margin-bottom: 0.75rem;
+}
+
+.inlineLink {
+  color: var(--foreground);
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 35%, transparent);
+  font-weight: 500;
+}
+
+.inlineLink:hover,
+.inlineLink:focus-visible {
+  border-bottom-color: var(--foreground);
+}
+
+.inlineLink:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+  outline-offset: 2px;
 }
