@@ -108,7 +108,7 @@ export function deriveSourceTitle(source: {
   return "Untitled source";
 }
 
-function extractFilenameFromStorageKey(storageKey: string | null): string | null {
+export function extractFilenameFromStorageKey(storageKey: string | null): string | null {
   if (!storageKey) {
     return null;
   }

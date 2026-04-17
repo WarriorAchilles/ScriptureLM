@@ -22,6 +22,7 @@
     "worker": "tsx src/worker/index.ts",
     "jobs:enqueue": "tsx scripts/jobs-enqueue.ts",
     "jobs:list": "tsx scripts/jobs-list.ts",
+    "retrieve:smoke": "tsx scripts/retrieve-smoke.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate"
