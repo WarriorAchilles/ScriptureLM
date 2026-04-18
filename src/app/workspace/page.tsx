@@ -36,6 +36,11 @@ export default async function WorkspacePage() {
             View source catalog →
           </Link>
         </p>
+        <p className={styles.lead}>
+          <Link href="/workspace/summaries" className={styles.inlineLink}>
+            Generate summaries →
+          </Link>
+        </p>
       </main>
     </div>
   );

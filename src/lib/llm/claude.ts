@@ -15,7 +15,11 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import type { MessageParam, RawMessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
+import type {
+  Message,
+  MessageParam,
+  RawMessageStreamEvent,
+} from "@anthropic-ai/sdk/resources/messages";
 import { getServerEnv } from "@/lib/config";
 
 /** Default Claude model when `ANTHROPIC_MODEL` is unset. Cheap + fast for chat. */
@@ -48,6 +52,13 @@ export type AnthropicCreateBody = {
   stream: true;
 };
 
+export type AnthropicCreateNonStreamingBody = {
+  model: string;
+  max_tokens: number;
+  system: string;
+  messages: MessageParam[];
+};
+
 export type AnthropicCreateOptions = {
   signal?: AbortSignal;
 };
@@ -56,13 +67,22 @@ export type AnthropicCreateOptions = {
  * Minimal interface we depend on from the Anthropic SDK. Tests substitute a
  * stub returning a hand-rolled async iterable so we don't require network
  * access (and so `ANTHROPIC_API_KEY` need not be set in CI).
+ *
+ * Both the streaming and non-streaming shapes live on the same surface so
+ * `callClaudeCompletion` and `streamClaudeRagResponse` can share a client.
  */
 export type AnthropicClient = {
   messages: {
     create(
       body: AnthropicCreateBody,
       options?: AnthropicCreateOptions,
-    ): Promise<AsyncIterable<RawMessageStreamEvent>> | AsyncIterable<RawMessageStreamEvent>;
+    ):
+      | Promise<AsyncIterable<RawMessageStreamEvent>>
+      | AsyncIterable<RawMessageStreamEvent>;
+    create(
+      body: AnthropicCreateNonStreamingBody,
+      options?: AnthropicCreateOptions,
+    ): Promise<Message>;
   };
 };
 
@@ -195,6 +215,81 @@ export async function* streamClaudeRagResponse(
     text: accumulatedText,
     usage: { inputTokens, outputTokens },
     stopReason,
+  };
+}
+
+/** Final accumulated result returned by a non-streaming completion call. */
+export type ClaudeCompletionResult = Readonly<{
+  text: string;
+  usage: ClaudeUsage;
+  stopReason: string | null;
+}>;
+
+export type CallClaudeCompletionParams = Readonly<{
+  /** System prompt with grounding rules + any source context. */
+  system: string;
+  /** Conversation messages (single user turn is typical for summaries). */
+  messages: readonly MessageParam[];
+  /** Optional override; defaults to `ANTHROPIC_MODEL` env or `DEFAULT_CLAUDE_MODEL`. */
+  model?: string;
+  /** Optional override; defaults to `DEFAULT_MAX_TOKENS`. */
+  maxTokens?: number;
+  /** Abort signal forwarded to the SDK so client disconnects stop billing. */
+  signal?: AbortSignal;
+}>;
+
+export type CallClaudeCompletionDeps = Readonly<{
+  /** Inject a stub client in tests; otherwise we lazily construct from env. */
+  client?: AnthropicClient;
+}>;
+
+/**
+ * Non-streaming Claude completion used by the summarization path (Step 15).
+ *
+ * Kept separate from `streamClaudeRagResponse` because:
+ *   1. Summaries prefer a single, fully-formed response over token-by-token
+ *      streaming — the UX is a form submit / Regenerate button, not a chat.
+ *   2. The caller persists or displays the whole text once it's ready, so
+ *      there's no async iteration contract to maintain.
+ *
+ * Returns the concatenated text of every `text` content block, the token
+ * usage reported by the SDK, and the stop reason so the caller can log
+ * usage for §9 prep.
+ */
+export async function callClaudeCompletion(
+  params: CallClaudeCompletionParams,
+  deps: CallClaudeCompletionDeps = {},
+): Promise<ClaudeCompletionResult> {
+  const client = resolveAnthropicClient(deps);
+  const model = resolveModel(params.model);
+  const maxTokens = params.maxTokens ?? DEFAULT_MAX_TOKENS;
+
+  const message = await client.messages.create(
+    {
+      model,
+      max_tokens: maxTokens,
+      system: params.system,
+      messages: params.messages as MessageParam[],
+    },
+    params.signal ? { signal: params.signal } : undefined,
+  );
+
+  // `content` is an array of typed blocks (text, tool_use, thinking, …). For
+  // this RAG-style path we only emit `text` blocks; concatenating in order
+  // preserves the model's intended prose flow.
+  const text = message.content
+    .map((block) =>
+      block.type === "text" && typeof block.text === "string" ? block.text : "",
+    )
+    .join("");
+
+  return {
+    text,
+    usage: {
+      inputTokens: message.usage?.input_tokens ?? 0,
+      outputTokens: message.usage?.output_tokens ?? 0,
+    },
+    stopReason: message.stop_reason ?? null,
   };
 }
 
