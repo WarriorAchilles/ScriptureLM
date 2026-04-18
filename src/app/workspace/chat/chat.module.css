@@ -261,6 +261,74 @@
   margin-top: 0.5rem;
 }
 
+.customScopeChipsWrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.15rem;
+  min-width: 0;
+}
+
+.customScopeChip {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: min(100%, 16rem);
+  min-height: 2rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.customScopeChipLabel {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.45rem 0.35rem 0.55rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customScopeChipRemove {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  min-width: 2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.customScopeChipRemove:hover:not(:disabled) {
+  background: color-mix(in srgb, #dc2626 14%, transparent);
+  color: var(--foreground);
+}
+
+.customScopeChipRemove:focus-visible {
+  outline: 2px solid color-mix(in srgb, #4f46e5 65%, transparent);
+  outline-offset: -2px;
+}
+
+.customScopeChipRemove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .textarea {
   resize: vertical;
   min-height: 3.5rem;

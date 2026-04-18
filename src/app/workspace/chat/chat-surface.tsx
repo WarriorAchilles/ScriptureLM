@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import type { ChatMessageSummary } from "@/lib/chat/thread";
 import type { CatalogSourceSummary } from "@/lib/sources/list-catalog";
@@ -195,6 +195,30 @@ export function ChatSurface({
     [submit],
   );
 
+  const customSelectionChips = useMemo(() => {
+    if (scope.mode !== "custom" || !scope.selectedSourceIds?.length) {
+      return [];
+    }
+    return scope.selectedSourceIds.map((sourceId) => {
+      const match = catalog.find((source) => source.id === sourceId);
+      const label = match?.title ?? "Unknown source";
+      return { sourceId, label };
+    });
+  }, [scope.mode, scope.selectedSourceIds, catalog]);
+
+  const removeCustomSource = useCallback((sourceId: string) => {
+    setScope((previous) => {
+      if (previous.mode !== "custom") {
+        return previous;
+      }
+      const ids = previous.selectedSourceIds ?? [];
+      return {
+        mode: "custom",
+        selectedSourceIds: ids.filter((id) => id !== sourceId),
+      };
+    });
+  }, []);
+
   return (
     <section className={styles.surface} aria-label="Chat conversation">
       <div className={styles.surfaceLayout}>
@@ -220,6 +244,30 @@ export function ChatSurface({
           </div>
 
           <form className={styles.composer} onSubmit={handleSubmit}>
+            {customSelectionChips.length > 0 ? (
+              <div
+                className={styles.customScopeChipsWrap}
+                role="list"
+                aria-label="Sources included in this message"
+              >
+                {customSelectionChips.map(({ sourceId, label }) => (
+                  <div key={sourceId} className={styles.customScopeChip} role="listitem">
+                    <span className={styles.customScopeChipLabel} title={label}>
+                      {label}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.customScopeChipRemove}
+                      onClick={() => removeCustomSource(sourceId)}
+                      disabled={isSending}
+                      aria-label={`Remove ${label} from custom scope`}
+                    >
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <label htmlFor="chat-composer" className={styles.visuallyHidden}>
               Write a message
             </label>
