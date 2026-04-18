@@ -9,6 +9,8 @@
 
 import type { Prisma, SourceCorpus } from "@prisma/client";
 import { parseSermonIdFromFilename } from "@/lib/ingest/filename-meta";
+import type { BibleTestamentId } from "@/lib/sources/bible-testament";
+import { testamentForBibleBook } from "@/lib/sources/bible-testament";
 
 export const CATALOG_ROOT_SEGMENTS: readonly string[] = [];
 
@@ -20,7 +22,16 @@ export type CatalogPathRoot = { kind: "root" };
 
 export type CatalogPathBibleLanding = { kind: "bible" };
 
-export type CatalogPathBibleBook = { kind: "bible-book"; bookLabel: string };
+export type CatalogPathBibleOldTestament = { kind: "bible-ot" };
+
+export type CatalogPathBibleNewTestament = { kind: "bible-nt" };
+
+export type CatalogPathBibleBook = {
+  kind: "bible-book";
+  bookLabel: string;
+  /** Set when using canonical `bible/ot/...` or `bible/nt/...` URLs (or inferred from legacy `bible/<book>`). */
+  testament?: BibleTestamentId;
+};
 
 /** The Message — landing (all sermon subfolders). */
 export type CatalogPathMessageLanding = { kind: "message" };
@@ -36,6 +47,8 @@ export type CatalogPathOther = { kind: "other" };
 export type ParsedCatalogPath =
   | CatalogPathRoot
   | CatalogPathBibleLanding
+  | CatalogPathBibleOldTestament
+  | CatalogPathBibleNewTestament
   | CatalogPathBibleBook
   | CatalogPathMessageLanding
   | CatalogPathMessageYear
@@ -105,8 +118,36 @@ export function parseCatalogPath(raw: string | null | undefined): ParsedCatalogP
   if (segments.length === 1 && first === "bible") {
     return { kind: "bible" };
   }
-  if (segments.length === 2 && first === "bible" && second) {
-    return { kind: "bible-book", bookLabel: second };
+
+  if (first === "bible" && segments.length >= 2) {
+    const seg1 = segments[1]!;
+    const seg1Lower = seg1.toLowerCase();
+
+    if (segments.length === 3) {
+      const bookLabel = segments[2]!;
+      if (seg1Lower === "ot" || seg1Lower === "old-testament") {
+        return { kind: "bible-book", testament: "ot", bookLabel };
+      }
+      if (seg1Lower === "nt" || seg1Lower === "new-testament") {
+        return { kind: "bible-book", testament: "nt", bookLabel };
+      }
+      return { kind: "root" };
+    }
+
+    if (segments.length === 2) {
+      if (seg1Lower === "ot" || seg1Lower === "old-testament") {
+        return { kind: "bible-ot" };
+      }
+      if (seg1Lower === "nt" || seg1Lower === "new-testament") {
+        return { kind: "bible-nt" };
+      }
+      const inferred = testamentForBibleBook(seg1);
+      return {
+        kind: "bible-book",
+        bookLabel: seg1,
+        ...(inferred ? { testament: inferred } : {}),
+      };
+    }
   }
 
   if (segments.length === 1 && first === "message") {
@@ -160,7 +201,14 @@ export function formatCatalogPath(path: ParsedCatalogPath): string {
       return "";
     case "bible":
       return "bible";
+    case "bible-ot":
+      return "bible/ot";
+    case "bible-nt":
+      return "bible/nt";
     case "bible-book":
+      if (path.testament) {
+        return `bible/${path.testament}/${encodeURIComponent(path.bookLabel)}`;
+      }
       return `bible/${encodeURIComponent(path.bookLabel)}`;
     case "message":
       return "message";
@@ -190,6 +238,10 @@ export function catalogFolderLabel(path: ParsedCatalogPath): string {
       return "All folders";
     case "bible":
       return "The Bible";
+    case "bible-ot":
+      return "The Old Testament";
+    case "bible-nt":
+      return "The New Testament";
     case "bible-book":
       return path.bookLabel;
     case "message":
@@ -236,21 +288,10 @@ export function prismaWhereForCatalogLeaf(
   path: ParsedCatalogPath,
 ): Prisma.SourceWhereInput | null {
   switch (path.kind) {
-    case "bible-book": {
-      const book = path.bookLabel.trim();
-      if (book === "Unspecified" || book === "_unspecified") {
-        return {
-          deletedAt: null,
-          corpus: "scripture",
-          OR: [{ bibleBook: null }, { bibleBook: "" }],
-        };
-      }
-      return {
-        deletedAt: null,
-        corpus: "scripture",
-        bibleBook: book,
-      };
-    }
+    case "bible-book":
+      // Resolved in application code (`scriptureRowMatchesBibleBookFolder`) so rows
+      // with null `bibleBook` still match when the book is inferred from `storage_key`.
+      return null;
     case "other":
       return { deletedAt: null, corpus: "other" };
     case "message-year": {
@@ -286,8 +327,21 @@ export function catalogPathBreadcrumbTrail(
     case "bible":
       trail.push({ label: "The Bible", pathQuery: "bible" });
       break;
+    case "bible-ot":
+      trail.push({ label: "The Bible", pathQuery: "bible" });
+      trail.push({ label: "The Old Testament", pathQuery: "bible/ot" });
+      break;
+    case "bible-nt":
+      trail.push({ label: "The Bible", pathQuery: "bible" });
+      trail.push({ label: "The New Testament", pathQuery: "bible/nt" });
+      break;
     case "bible-book":
       trail.push({ label: "The Bible", pathQuery: "bible" });
+      if (path.testament === "ot") {
+        trail.push({ label: "The Old Testament", pathQuery: "bible/ot" });
+      } else if (path.testament === "nt") {
+        trail.push({ label: "The New Testament", pathQuery: "bible/nt" });
+      }
       trail.push({
         label: path.bookLabel,
         pathQuery: formatCatalogPath(path),

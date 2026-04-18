@@ -159,7 +159,7 @@ export default async function SourcesCatalogPage({
           <div className={styles.sectionHeader}>
             <div className={styles.sectionHeaderIntro}>
               <h2 id="sources-heading" className={styles.sectionTitle}>
-                The Bible — by book
+                The Bible
               </h2>
               <p className={styles.catalogTotal} aria-live="polite">
                 {index.bibleCount.toLocaleString()}{" "}
@@ -168,22 +168,152 @@ export default async function SourcesCatalogPage({
             </div>
           </div>
           <div className={styles.folderGrid}>
-            {index.bibleBooks.map((entry) => (
-              <FolderCard
-                key={entry.label}
-                href={folderHref(
-                  formatCatalogPath({
-                    kind: "bible-book",
-                    bookLabel: entry.label,
-                  }),
-                  { limit },
-                )}
-                title={entry.label}
-                count={entry.count}
-                subtitle="Open book"
-              />
-            ))}
+            <FolderCard
+              href={folderHref("bible/ot", { limit })}
+              title="The Old Testament"
+              count={index.bibleOldTestamentCount}
+              subtitle="Scripture — Hebrew Bible and writings to Malachi"
+            />
+            <FolderCard
+              href={folderHref("bible/nt", { limit })}
+              title="The New Testament"
+              count={index.bibleNewTestamentCount}
+              subtitle="Scripture — Gospels through Revelation"
+            />
           </div>
+          {index.bibleUnspecifiedCount > 0 ? (
+            <div className={styles.subfolderSection}>
+              <h3 className={styles.subfolderTitle}>No book set</h3>
+              <div className={styles.folderGrid}>
+                <FolderCard
+                  href={folderHref(
+                    formatCatalogPath({
+                      kind: "bible-book",
+                      bookLabel: "Unspecified",
+                    }),
+                    { limit },
+                  )}
+                  title="Unspecified"
+                  count={index.bibleUnspecifiedCount}
+                  subtitle="Sources without a bible book field"
+                />
+              </div>
+            </div>
+          ) : null}
+          {index.bibleBooksUnknown.length > 0 ? (
+            <div className={styles.subfolderSection}>
+              <h3 className={styles.subfolderTitle}>Other book names</h3>
+              <p className={styles.catalogTotal}>
+                These labels are not in the standard OT/NT list; open a book to browse
+                sources.
+              </p>
+              <div className={styles.folderGrid}>
+                {index.bibleBooksUnknown.map((entry) => (
+                  <FolderCard
+                    key={entry.label}
+                    href={folderHref(
+                      formatCatalogPath({
+                        kind: "bible-book",
+                        bookLabel: entry.label,
+                      }),
+                      { limit },
+                    )}
+                    title={entry.label}
+                    count={entry.count}
+                    subtitle="Open book"
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      </CatalogShell>
+    );
+  }
+
+  if (parsedPath.kind === "bible-ot") {
+    const index = await loadCatalogFolderIndex();
+    return (
+      <CatalogShell totalSources={index.totalSources} showFlatToggle flatActive={false}>
+        <FolderBrowseHeader parsedPath={parsedPath} />
+        <section aria-labelledby="sources-heading">
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeaderIntro}>
+              <h2 id="sources-heading" className={styles.sectionTitle}>
+                The Old Testament — by book
+              </h2>
+              <p className={styles.catalogTotal} aria-live="polite">
+                {index.bibleOldTestamentCount.toLocaleString()}{" "}
+                {index.bibleOldTestamentCount === 1 ? "source" : "sources"}
+              </p>
+            </div>
+          </div>
+          {index.bibleBooksOld.length === 0 ? (
+            <p className={styles.catalogTotal}>No Old Testament sources indexed yet.</p>
+          ) : (
+            <div className={styles.folderGrid}>
+              {index.bibleBooksOld.map((entry) => (
+                <FolderCard
+                  key={entry.label}
+                  href={folderHref(
+                    formatCatalogPath({
+                      kind: "bible-book",
+                      testament: "ot",
+                      bookLabel: entry.label,
+                    }),
+                    { limit },
+                  )}
+                  title={entry.label}
+                  count={entry.count}
+                  subtitle="Open book"
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </CatalogShell>
+    );
+  }
+
+  if (parsedPath.kind === "bible-nt") {
+    const index = await loadCatalogFolderIndex();
+    return (
+      <CatalogShell totalSources={index.totalSources} showFlatToggle flatActive={false}>
+        <FolderBrowseHeader parsedPath={parsedPath} />
+        <section aria-labelledby="sources-heading">
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeaderIntro}>
+              <h2 id="sources-heading" className={styles.sectionTitle}>
+                The New Testament — by book
+              </h2>
+              <p className={styles.catalogTotal} aria-live="polite">
+                {index.bibleNewTestamentCount.toLocaleString()}{" "}
+                {index.bibleNewTestamentCount === 1 ? "source" : "sources"}
+              </p>
+            </div>
+          </div>
+          {index.bibleBooksNew.length === 0 ? (
+            <p className={styles.catalogTotal}>No New Testament sources indexed yet.</p>
+          ) : (
+            <div className={styles.folderGrid}>
+              {index.bibleBooksNew.map((entry) => (
+                <FolderCard
+                  key={entry.label}
+                  href={folderHref(
+                    formatCatalogPath({
+                      kind: "bible-book",
+                      testament: "nt",
+                      bookLabel: entry.label,
+                    }),
+                    { limit },
+                  )}
+                  title={entry.label}
+                  count={entry.count}
+                  subtitle="Open book"
+                />
+              ))}
+            </div>
+          )}
         </section>
       </CatalogShell>
     );
@@ -388,6 +518,12 @@ function FolderBrowseHeader({ parsedPath }: { parsedPath: ParsedCatalogPath }) {
 function leafHeading(path: ParsedCatalogPath): string {
   switch (path.kind) {
     case "bible-book":
+      if (path.testament === "ot") {
+        return `The Bible — Old Testament — ${path.bookLabel}`;
+      }
+      if (path.testament === "nt") {
+        return `The Bible — New Testament — ${path.bookLabel}`;
+      }
       return `The Bible — ${path.bookLabel}`;
     case "message-transcripts":
       return "The Message — CAB";

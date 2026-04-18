@@ -15,6 +15,11 @@ import {
   vgrYearForSourceRow,
 } from "@/lib/sources/catalog-folders";
 import {
+  effectiveBibleBookForCatalog,
+  scriptureRowMatchesBibleBookFolder,
+  testamentForBibleBook,
+} from "@/lib/sources/bible-testament";
+import {
   deriveSourceTitle,
   type CatalogSourceSummary,
 } from "@/lib/sources/list-catalog";
@@ -22,12 +27,18 @@ import {
 export type CatalogFolderIndex = {
   totalSources: number;
   bibleCount: number;
+  bibleOldTestamentCount: number;
+  bibleNewTestamentCount: number;
+  bibleUnspecifiedCount: number;
+  bibleUnknownBookCount: number;
   /** All `corpus === sermon` rows (dated + transcripts). */
   messageCount: number;
   transcriptCount: number;
   datedSermonCount: number;
   otherCount: number;
-  bibleBooks: { label: string; count: number }[];
+  bibleBooksOld: { label: string; count: number }[];
+  bibleBooksNew: { label: string; count: number }[];
+  bibleBooksUnknown: { label: string; count: number }[];
   sermonYears: { year: number; count: number }[];
 };
 
@@ -174,21 +185,41 @@ export async function loadCatalogFolderIndex(): Promise<CatalogFolderIndex> {
   });
 
   let bibleCount = 0;
+  let bibleOldTestamentCount = 0;
+  let bibleNewTestamentCount = 0;
+  let bibleUnspecifiedCount = 0;
+  let bibleUnknownBookCount = 0;
   let transcriptCount = 0;
   let datedSermonCount = 0;
   let messageCount = 0;
   let otherCount = 0;
-  const bibleBookCounts = new Map<string, number>();
+  const bibleBooksOldMap = new Map<string, number>();
+  const bibleBooksNewMap = new Map<string, number>();
+  const bibleBooksUnknownMap = new Map<string, number>();
   const sermonYearCounts = new Map<number, number>();
 
   for (const row of rows) {
     if (row.corpus === "scripture") {
       bibleCount += 1;
-      const label =
-        row.bibleBook && row.bibleBook.trim().length > 0
-          ? row.bibleBook.trim()
-          : "Unspecified";
-      bibleBookCounts.set(label, (bibleBookCounts.get(label) ?? 0) + 1);
+      const effective = effectiveBibleBookForCatalog(row);
+      if (!effective) {
+        bibleUnspecifiedCount += 1;
+        continue;
+      }
+      const testament = testamentForBibleBook(effective);
+      if (testament === "ot") {
+        bibleOldTestamentCount += 1;
+        bibleBooksOldMap.set(effective, (bibleBooksOldMap.get(effective) ?? 0) + 1);
+      } else if (testament === "nt") {
+        bibleNewTestamentCount += 1;
+        bibleBooksNewMap.set(effective, (bibleBooksNewMap.get(effective) ?? 0) + 1);
+      } else {
+        bibleUnknownBookCount += 1;
+        bibleBooksUnknownMap.set(
+          effective,
+          (bibleBooksUnknownMap.get(effective) ?? 0) + 1,
+        );
+      }
       continue;
     }
     if (row.corpus === "other") {
@@ -215,14 +246,20 @@ export async function loadCatalogFolderIndex(): Promise<CatalogFolderIndex> {
     }
   }
 
-  const bibleBooks = [...bibleBookCounts.entries()]
-    .map(([label, count]) => ({ label, count }))
-    .sort((left, right) =>
-      compareStrings(
-        left.label === "Unspecified" ? "" : left.label,
-        right.label === "Unspecified" ? "" : right.label,
-      ),
-    );
+  function mapToSortedList(map: Map<string, number>): { label: string; count: number }[] {
+    return [...map.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((left, right) =>
+        compareStrings(
+          left.label === "Unspecified" ? "" : left.label,
+          right.label === "Unspecified" ? "" : right.label,
+        ),
+      );
+  }
+
+  const bibleBooksOld = mapToSortedList(bibleBooksOldMap);
+  const bibleBooksNew = mapToSortedList(bibleBooksNewMap);
+  const bibleBooksUnknown = mapToSortedList(bibleBooksUnknownMap);
 
   const sermonYears = [...sermonYearCounts.entries()]
     .map(([year, count]) => ({ year, count }))
@@ -231,11 +268,17 @@ export async function loadCatalogFolderIndex(): Promise<CatalogFolderIndex> {
   return {
     totalSources: rows.length,
     bibleCount,
+    bibleOldTestamentCount,
+    bibleNewTestamentCount,
+    bibleUnspecifiedCount,
+    bibleUnknownBookCount,
     messageCount,
     transcriptCount,
     datedSermonCount,
     otherCount,
-    bibleBooks,
+    bibleBooksOld,
+    bibleBooksNew,
+    bibleBooksUnknown,
     sermonYears,
   };
 }
@@ -282,6 +325,27 @@ export async function listCatalogFolderPage(options: {
         bibleBook: row.bibleBook,
         sermonCatalogId: row.sermonCatalogId,
         storageKey: row.storageKey,
+      }),
+    );
+    let summaries = sortSummaries(
+      mapRowsToSummaries(filtered),
+      options.sort,
+      options.order,
+    );
+    const totalCount = summaries.length;
+    summaries = summaries.slice(skip, skip + limit);
+    return { items: summaries, totalCount, page, pageSize: limit };
+  }
+
+  if (path.kind === "bible-book") {
+    const scriptureRows = await prisma.source.findMany({
+      where: mergeFolderAndSearch({ deletedAt: null, corpus: "scripture" }, options.q),
+      select: catalogSelect,
+    });
+    const filtered = scriptureRows.filter((row) =>
+      scriptureRowMatchesBibleBookFolder(row, {
+        bookLabel: path.bookLabel,
+        testament: path.testament,
       }),
     );
     let summaries = sortSummaries(

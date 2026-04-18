@@ -25,6 +25,10 @@ import {
   parseCatalogPath,
   vgrPrefixForCalendarYear,
 } from "@/lib/sources/catalog-folders";
+import {
+  effectiveBibleBookForCatalog,
+  testamentForBibleBook,
+} from "@/lib/sources/bible-testament";
 
 const prisma = new PrismaClient();
 
@@ -78,14 +82,61 @@ describe("deriveSourceTitle", () => {
   });
 });
 
+describe("bible book inference (null bibleBook + filename)", () => {
+  it("infers OT/NT books from storage filename for scripture rows", () => {
+    expect(
+      effectiveBibleBookForCatalog({
+        corpus: "scripture",
+        bibleBook: null,
+        storageKey: "sources/abc/Genesis.md",
+      }),
+    ).toBe("Genesis");
+    expect(
+      testamentForBibleBook(
+        effectiveBibleBookForCatalog({
+          corpus: "scripture",
+          bibleBook: null,
+          storageKey: "sources/abc/Genesis.md",
+        })!,
+      ),
+    ).toBe("ot");
+    expect(
+      effectiveBibleBookForCatalog({
+        corpus: "scripture",
+        bibleBook: null,
+        storageKey: "sources/xyz/John_KJV.md",
+      }),
+    ).toBe("John");
+    expect(
+      testamentForBibleBook(
+        effectiveBibleBookForCatalog({
+          corpus: "scripture",
+          bibleBook: null,
+          storageKey: "sources/xyz/John_KJV.md",
+        })!,
+      ),
+    ).toBe("nt");
+  });
+});
+
 describe("catalog folder paths", () => {
-  it("parses The Bible and nested books", () => {
+  it("parses The Bible, Old/New Testament, and books", () => {
     expect(parseCatalogPath("").kind).toBe("root");
     expect(parseCatalogPath("bible").kind).toBe("bible");
-    const book = parseCatalogPath("bible/Genesis");
-    expect(book.kind).toBe("bible-book");
-    if (book.kind === "bible-book") {
-      expect(book.bookLabel).toBe("Genesis");
+    expect(parseCatalogPath("bible/ot").kind).toBe("bible-ot");
+    expect(parseCatalogPath("bible/nt").kind).toBe("bible-nt");
+    const otBook = parseCatalogPath("bible/ot/Genesis");
+    expect(otBook.kind).toBe("bible-book");
+    if (otBook.kind === "bible-book") {
+      expect(otBook.bookLabel).toBe("Genesis");
+      expect(otBook.testament).toBe("ot");
+      expect(formatCatalogPath(otBook)).toBe("bible/ot/Genesis");
+    }
+    const legacyBook = parseCatalogPath("bible/John");
+    expect(legacyBook.kind).toBe("bible-book");
+    if (legacyBook.kind === "bible-book") {
+      expect(legacyBook.bookLabel).toBe("John");
+      expect(legacyBook.testament).toBe("nt");
     }
   });
 
