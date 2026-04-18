@@ -31,7 +31,7 @@ vi.mock("@/lib/retrieval", async () => {
 });
 
 import { auth } from "@/auth";
-import { GET, POST } from "@/app/api/chat/messages/route";
+import { DELETE, GET, POST } from "@/app/api/chat/messages/route";
 import { retrieveContext } from "@/lib/retrieval";
 import { REFUSAL_SUBSTRING } from "@/lib/chat/rag-prompt";
 
@@ -138,6 +138,40 @@ describe("chat messages API", () => {
     vi.mocked(auth).mockResolvedValue(null);
     const response = await POST(buildPostRequest({ content: "hello" }));
     expect(response.status).toBe(401);
+  });
+
+  it("returns 401 on DELETE without a session", async () => {
+    vi.mocked(auth).mockResolvedValue(null);
+    const response = await DELETE();
+    expect(response.status).toBe(401);
+  });
+
+  it("DELETE removes all messages for the thread", async () => {
+    const user = await createTestUser("clear");
+    mockAuthenticatedUser(user.id, user.email);
+
+    const postResponse = await POST(buildPostRequest({ content: "to be cleared" }));
+    expect(postResponse.status).toBe(200);
+    await readSseFrames(postResponse);
+
+    const beforeGet = await GET();
+    expect(beforeGet.status).toBe(200);
+    const beforeBody = (await beforeGet.json()) as { messages: unknown[] };
+    expect(beforeBody.messages.length).toBeGreaterThan(0);
+
+    const deleteResponse = await DELETE();
+    expect(deleteResponse.status).toBe(200);
+    const deleteBody = (await deleteResponse.json()) as {
+      ok: boolean;
+      deletedCount: number;
+    };
+    expect(deleteBody.ok).toBe(true);
+    expect(deleteBody.deletedCount).toBeGreaterThan(0);
+
+    const afterGet = await GET();
+    expect(afterGet.status).toBe(200);
+    const afterBody = (await afterGet.json()) as { messages: unknown[] };
+    expect(afterBody.messages).toHaveLength(0);
   });
 
   it("rejects POST with empty content", async () => {

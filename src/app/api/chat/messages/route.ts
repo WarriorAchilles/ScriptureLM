@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
-import { listThreadMessages } from "@/lib/chat/thread";
+import { clearThreadMessages, listThreadMessages } from "@/lib/chat/thread";
 import {
   EmptyMessageError,
   runRagTurn,
@@ -19,6 +19,8 @@ export const runtime = "nodejs";
  * Chat endpoint for the signed-in user's single thread.
  *
  * GET (Step 11): returns the full persisted history.
+ *
+ * DELETE: removes all messages in the user's chat thread (clear history).
  *
  * POST (Step 11 + 13): persists the user message, runs the RAG pipeline, and
  * streams the assistant reply as Server-Sent Events. Single evolving endpoint
@@ -51,6 +53,26 @@ export async function GET(): Promise<NextResponse> {
     console.error("[api/chat/messages GET]", errorMessage);
     return NextResponse.json(
       { error: "Failed to load messages" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(): Promise<NextResponse> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const result = await clearThreadMessages(userId);
+    return NextResponse.json({ ok: true as const, deletedCount: result.deletedCount });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[api/chat/messages DELETE]", errorMessage);
+    return NextResponse.json(
+      { error: "Failed to clear messages" },
       { status: 500 },
     );
   }

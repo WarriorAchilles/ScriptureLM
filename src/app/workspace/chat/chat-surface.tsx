@@ -38,6 +38,8 @@ export function ChatSurface({
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
+  const [isClearing, setIsClearing] = useState(false);
   const [scope, setScope] = useState<ChatSourceScope>(DEFAULT_CHAT_SOURCE_SCOPE);
 
   // `custom` mode requires at least one selected source per source-scope.ts
@@ -219,6 +221,40 @@ export function ChatSurface({
     });
   }, []);
 
+  const clearHistory = useCallback(async () => {
+    if (messages.length === 0 || isClearing) {
+      return;
+    }
+    const confirmed = window.confirm(
+      "Clear all messages in this chat? This cannot be undone.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    activeStreamRef.current?.abort();
+    setIsClearing(true);
+    setClearError(null);
+    try {
+      const response = await fetch("/api/chat/messages", { method: "DELETE" });
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(body.error ?? `Request failed (${response.status})`);
+      }
+      setMessages([]);
+      setSendError(null);
+    } catch (error) {
+      setClearError(
+        error instanceof Error ? error.message : "Failed to clear history",
+      );
+    } finally {
+      setIsClearing(false);
+      textareaRef.current?.focus();
+    }
+  }, [messages.length, isClearing]);
+
   return (
     <section className={styles.surface} aria-label="Chat conversation">
       <div className={styles.surfaceLayout}>
@@ -232,6 +268,22 @@ export function ChatSurface({
         </aside>
 
         <div className={styles.mainChat}>
+          <div className={styles.chatToolbar}>
+            <button
+              type="button"
+              className={styles.clearHistoryButton}
+              onClick={() => void clearHistory()}
+              disabled={messages.length === 0 || isClearing}
+              aria-label="Clear chat history"
+            >
+              {isClearing ? "Clearing…" : "Clear history"}
+            </button>
+          </div>
+          {clearError ? (
+            <p className={styles.toolbarError} role="alert">
+              {clearError}
+            </p>
+          ) : null}
           <div className={styles.messageList} role="log" aria-live="polite">
             {messages.length === 0 ? (
               <EmptyConversation />

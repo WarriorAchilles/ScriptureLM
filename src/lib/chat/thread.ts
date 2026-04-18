@@ -70,6 +70,13 @@ export async function listThreadMessages(userId: string): Promise<ChatThreadStat
   };
 }
 
+/** Deletes all messages in the signed-in user's single chat thread. */
+export async function clearThreadMessages(userId: string): Promise<{ deletedCount: number }> {
+  const { threadId } = await ensureUserThread(userId);
+  const result = await prisma.message.deleteMany({ where: { threadId } });
+  return { deletedCount: result.count };
+}
+
 /**
  * Persists a user message, lazily creating the notebook + thread in the same
  * transaction per Step 11 instruction #7. Returns the created row and the thread
