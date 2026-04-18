@@ -65,12 +65,85 @@
   flex: 1;
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .sectionTitle {
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--foreground);
-  margin-bottom: 0.75rem;
+  margin: 0;
+}
+
+.pageSizeControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pageSizeLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+}
+
+.pageSizeSelect {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.4rem 0.6rem;
+  padding-right: 1.9rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  background-color: color-mix(in srgb, var(--foreground) 2%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  appearance: none;
+  /* `color-scheme` lets the browser render the native option popup with the
+     appropriate light/dark chrome; without it Chromium drops back to a light
+     popup with low-contrast grey text on dark OS themes. */
+  color-scheme: light dark;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5l3 3 3-3'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 0.75rem;
+}
+
+/* The native option popup renders outside this document's CSS scope on most
+   platforms, but Chromium / Firefox do honor explicit color+background on the
+   option element. Force a high-contrast pairing so the numbers are legible in
+   both light and dark OS themes. */
+.pageSizeSelect option {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pageSizeSelect option {
+    color: #f8fafc;
+    background-color: #1e293b;
+  }
+}
+
+.pageSizeSelect:hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.pageSizeSelect:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.pageSizeSelect:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .tableWrap {
@@ -237,7 +310,9 @@
 .pageNav {
   margin-top: 1.25rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .pageLink {
@@ -247,6 +322,10 @@
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
   color: var(--foreground);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .pageLink:hover {
@@ -256,6 +335,17 @@
 .pageLink:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
   outline-offset: 2px;
+}
+
+/* Rendered as a <span> on the edge pages (first/last) so the pagination control
+   keeps its layout and both actions share the same footprint. Kept
+   non-interactive (no :hover, cursor: default, muted) and hidden from AT via
+   aria-hidden on the element itself. */
+.pageLinkDisabled {
+  color: color-mix(in srgb, var(--foreground) 38%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+  cursor: default;
+  pointer-events: none;
 }
 
 .pageFoot {

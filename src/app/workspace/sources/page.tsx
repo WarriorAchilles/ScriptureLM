@@ -6,6 +6,7 @@ import {
   listCatalogSources,
   type CatalogSourceSummary,
 } from "@/lib/sources/list-catalog";
+import { PageSizeSelect } from "./page-size-select";
 import styles from "./sources.module.css";
 
 // Defer rendering to request time — the catalog changes whenever operators ingest/reindex,
@@ -15,6 +16,10 @@ export const dynamic = "force-dynamic";
 type SearchParams = {
   cursor?: string | string[];
   limit?: string | string[];
+  // Breadcrumb of cursors for pages visited before the current one, most-recent last.
+  // Comma-separated; base64url cursors never contain commas so splitting is safe.
+  // Page 1 is represented implicitly by an empty trail with no `cursor` param.
+  trail?: string | string[];
 };
 
 /**
@@ -39,7 +44,9 @@ export default async function SourcesCatalogPage({
   const params = await searchParams;
   const rawCursor = firstParam(params.cursor);
   const rawLimit = firstParam(params.limit);
+  const rawTrail = firstParam(params.trail);
   const limit = clampListLimit(rawLimit ? Number(rawLimit) : undefined);
+  const trail = parseTrail(rawTrail);
 
   const page = await listCatalogSources({ limit, cursor: rawCursor });
 
@@ -61,9 +68,12 @@ export default async function SourcesCatalogPage({
       </header>
 
       <main className={styles.main} aria-labelledby="sources-heading">
-        <h2 id="sources-heading" className={styles.sectionTitle}>
-          Catalog entries
-        </h2>
+        <div className={styles.sectionHeader}>
+          <h2 id="sources-heading" className={styles.sectionTitle}>
+            Catalog entries
+          </h2>
+          <PageSizeSelect value={limit} />
+        </div>
 
         {page.items.length === 0 ? (
           <EmptyState />
@@ -73,7 +83,9 @@ export default async function SourcesCatalogPage({
 
         <Pagination
           limit={limit}
+          currentCursor={rawCursor ?? null}
           nextCursor={page.nextCursor}
+          trail={trail}
           itemCount={page.items.length}
         />
       </main>
@@ -171,16 +183,32 @@ function EmptyState() {
   );
 }
 
+/**
+ * Pagination for keyset-paginated catalog pages.
+ *
+ * Forward-only keyset cursors can't be reversed, so "Previous" is implemented by
+ * remembering the trail of cursors the user walked through. The current page's
+ * starting cursor lives in `?cursor=`; the cursors of every earlier page (page 2,
+ * page 3, ...) are appended to `?trail=`. Page 1 is represented by both being
+ * absent. Going back pops the last trail entry and promotes it to `cursor`.
+ */
 function Pagination({
   limit,
+  currentCursor,
   nextCursor,
+  trail,
   itemCount,
 }: {
   limit: number;
+  currentCursor: string | null;
   nextCursor: string | null;
+  trail: string[];
   itemCount: number;
 }) {
-  if (!nextCursor) {
+  const hasPrevious = currentCursor !== null;
+  const hasNext = nextCursor !== null;
+
+  if (!hasPrevious && !hasNext) {
     return (
       <p className={styles.pageFoot} aria-live="polite">
         {itemCount > 0 ? "End of catalog." : null}
@@ -188,16 +216,42 @@ function Pagination({
     );
   }
 
-  const params = new URLSearchParams({ cursor: nextCursor, limit: String(limit) });
+  const previousHref = hasPrevious ? buildPreviousHref(limit, trail) : null;
+  const nextHref = hasNext
+    ? buildNextHref(limit, nextCursor, trail, currentCursor)
+    : null;
+
   return (
     <nav className={styles.pageNav} aria-label="Catalog pagination">
-      <Link
-        href={`/workspace/sources?${params.toString()}`}
-        className={styles.pageLink}
-        prefetch={false}
-      >
-        Next page →
-      </Link>
+      {previousHref ? (
+        <Link
+          href={previousHref}
+          className={styles.pageLink}
+          prefetch={false}
+          rel="prev"
+        >
+          ← Previous page
+        </Link>
+      ) : (
+        <span className={`${styles.pageLink} ${styles.pageLinkDisabled}`} aria-hidden="true">
+          ← Previous page
+        </span>
+      )}
+
+      {nextHref ? (
+        <Link
+          href={nextHref}
+          className={styles.pageLink}
+          prefetch={false}
+          rel="next"
+        >
+          Next page →
+        </Link>
+      ) : (
+        <span className={`${styles.pageLink} ${styles.pageLinkDisabled}`} aria-hidden="true">
+          Next page →
+        </span>
+      )}
       {/*
         Perf note (spec §11): the catalog is expected to grow toward ~1,200 rows. Keyset
         pagination keeps queries O(log N); when a user actually needs to scan all rows on
@@ -206,6 +260,49 @@ function Pagination({
       */}
     </nav>
   );
+}
+
+function buildNextHref(
+  limit: number,
+  nextCursor: string,
+  trail: string[],
+  currentCursor: string | null,
+): string {
+  // When advancing, the current page's cursor becomes the newest trail entry so
+  // we can walk back to it later. Page 1 (currentCursor === null) contributes no
+  // trail entry since it's the implicit base case.
+  const nextTrail = currentCursor !== null ? [...trail, currentCursor] : trail;
+  const params = new URLSearchParams({
+    cursor: nextCursor,
+    limit: String(limit),
+  });
+  if (nextTrail.length > 0) {
+    params.set("trail", nextTrail.join(","));
+  }
+  return `/workspace/sources?${params.toString()}`;
+}
+
+function buildPreviousHref(limit: number, trail: string[]): string {
+  // Pop the newest trail entry to use as the previous page's cursor. An empty
+  // trail means the previous page is page 1 (no cursor param).
+  const previousTrail = trail.slice(0, -1);
+  const previousCursor = trail.length > 0 ? trail[trail.length - 1] : null;
+
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (previousCursor) {
+    params.set("cursor", previousCursor);
+  }
+  if (previousTrail.length > 0) {
+    params.set("trail", previousTrail.join(","));
+  }
+  return `/workspace/sources?${params.toString()}`;
+}
+
+function parseTrail(raw: string | undefined): string[] {
+  if (!raw) {
+    return [];
+  }
+  return raw.split(",").filter((entry) => entry.length > 0);
 }
 
 function firstParam(value: string | string[] | undefined): string | undefined {
