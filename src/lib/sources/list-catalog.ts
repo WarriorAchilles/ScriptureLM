@@ -24,6 +24,11 @@ export type CatalogSourceSummary = {
   status: SourceStatus;
   errorMessage: string | null;
   updatedAt: string;
+  /** Raw fields for catalog folder grouping (same logic as Sources page). */
+  bibleBook: string | null;
+  bibleTranslation: string | null;
+  sermonCatalogId: string | null;
+  storageKey: string | null;
 };
 
 export type ListCatalogPage = {
@@ -46,6 +51,9 @@ type CursorPayload = { updatedAt: string; id: string };
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+
+/** Master spec sizes the catalog around ~1,200 rows; cap paginated "load all" fetches below this. */
+const WORKSPACE_FULL_CATALOG_CAP = 5000;
 
 export function clampListLimit(rawLimit: number | null | undefined): number {
   if (!Number.isFinite(rawLimit ?? NaN)) {
@@ -214,6 +222,10 @@ export async function listCatalogSources(
     status: row.status,
     errorMessage: row.errorMessage,
     updatedAt: row.updatedAt.toISOString(),
+    bibleBook: row.bibleBook,
+    bibleTranslation: row.bibleTranslation,
+    sermonCatalogId: row.sermonCatalogId,
+    storageKey: row.storageKey,
   }));
 
   const nextCursor =
@@ -225,4 +237,30 @@ export async function listCatalogSources(
       : null;
 
   return { items, nextCursor };
+}
+
+/**
+ * Loads every catalog row matching optional `q` by walking keyset pages. Workspace
+ * pickers (chat Custom scope, summaries) need the full set: a single `limit: 200`
+ * call only returns the most recently updated slice, so sources beyond that page
+ * were invisible in multi-select UIs.
+ */
+export async function listCatalogSourcesAllPages(options: {
+  q?: string | null;
+} = {}): Promise<CatalogSourceSummary[]> {
+  const aggregated: CatalogSourceSummary[] = [];
+  let cursor: string | null = null;
+  while (aggregated.length < WORKSPACE_FULL_CATALOG_CAP) {
+    const page = await listCatalogSources({
+      limit: MAX_LIMIT,
+      cursor,
+      q: options.q,
+    });
+    aggregated.push(...page.items);
+    if (!page.nextCursor) {
+      break;
+    }
+    cursor = page.nextCursor;
+  }
+  return aggregated;
 }

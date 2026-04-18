@@ -197,64 +197,71 @@ export function ChatSurface({
 
   return (
     <section className={styles.surface} aria-label="Chat conversation">
-      <div className={styles.messageList} role="log" aria-live="polite">
-        {messages.length === 0 ? (
-          <EmptyConversation />
-        ) : (
-          messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
-          ))
-        )}
-        <div ref={listEndRef} />
-      </div>
+      <div className={styles.surfaceLayout}>
+        <aside className={styles.scopeSidebar}>
+          <ScopePicker
+            scope={scope}
+            onScopeChange={setScope}
+            catalog={catalog}
+            disabled={isSending}
+          />
+        </aside>
 
-      <form className={styles.composer} onSubmit={handleSubmit}>
-        <ScopePicker
-          scope={scope}
-          onScopeChange={setScope}
-          catalog={catalog}
-          disabled={isSending}
-        />
-        <label htmlFor="chat-composer" className={styles.visuallyHidden}>
-          Write a message
-        </label>
-        <textarea
-          id="chat-composer"
-          ref={textareaRef}
-          className={styles.textarea}
-          placeholder="Ask a question about Scripture or the sermons…"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={3}
-          disabled={isSending}
-          autoFocus
-        />
-        <div className={styles.composerFoot}>
-          <p className={styles.composerHint}>
-            Enter to send · Shift + Enter for a newline
-          </p>
-          <button
-            type="submit"
-            className={styles.sendButton}
-            disabled={
-              isSending || draft.trim().length === 0 || customScopeInvalid
-            }
-          >
-            {isSending ? "Sending…" : "Send"}
-          </button>
+        <div className={styles.mainChat}>
+          <div className={styles.messageList} role="log" aria-live="polite">
+            {messages.length === 0 ? (
+              <EmptyConversation />
+            ) : (
+              messages.map((message) => (
+                <MessageBubble key={message.id} message={message} />
+              ))
+            )}
+            <div ref={listEndRef} />
+          </div>
+
+          <form className={styles.composer} onSubmit={handleSubmit}>
+            <label htmlFor="chat-composer" className={styles.visuallyHidden}>
+              Write a message
+            </label>
+            <textarea
+              id="chat-composer"
+              ref={textareaRef}
+              className={styles.textarea}
+              placeholder="Ask a question about Scripture or the Message..."
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={3}
+              disabled={isSending}
+              autoFocus
+            />
+            <div className={styles.composerFoot}>
+              <p className={styles.composerHint}>
+                Enter to send · Shift + Enter for a newline
+              </p>
+              <button
+                type="submit"
+                className={styles.sendButton}
+                disabled={
+                  isSending || draft.trim().length === 0 || customScopeInvalid
+                }
+              >
+                {isSending ? "Sending…" : "Send"}
+              </button>
+            </div>
+            {customScopeInvalid ? (
+              <p className={styles.sendError} role="status">
+                Pick at least one source to use Custom scope.
+              </p>
+            ) : null}
+            {sendError ? (
+              <p className={styles.sendError} role="alert">
+                {sendError}
+              </p>
+            ) : null}
+          </form>
         </div>
-        {customScopeInvalid ? (
-          <p className={styles.sendError} role="status">
-            Pick at least one source to use Custom scope.
-          </p>
-        ) : null}
-        {sendError ? (
-          <p className={styles.sendError} role="alert">
-            {sendError}
-          </p>
-        ) : null}
-      </form>
+      </div>
     </section>
   );
 }

@@ -170,6 +170,10 @@ function mapRowsToSummaries(rows: SourceRowForCatalog[]): CatalogSourceSummary[]
     status: row.status,
     errorMessage: row.errorMessage,
     updatedAt: row.updatedAt.toISOString(),
+    bibleBook: row.bibleBook,
+    bibleTranslation: row.bibleTranslation,
+    sermonCatalogId: row.sermonCatalogId,
+    storageKey: row.storageKey,
   }));
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef } from "react";
 import type { CatalogSourceSummary } from "@/lib/sources/list-catalog";
 import type { ChatSourceScope, ScopeMode } from "@/lib/chat/source-scope";
+import { CustomScopeBrowser } from "./custom-scope-browser";
 import styles from "./chat.module.css";
 
 /**
@@ -12,10 +13,9 @@ import styles from "./chat.module.css";
  *  - A radio group of four preset modes — **All / Scripture / Sermons / Custom**.
  *    Implemented as `role="radio"` buttons so we can style them as pills while
  *    preserving arrow-key navigation and `aria-checked` semantics per §6.5.
- *  - When `Custom` is active, an expanded listbox-style multi-select with a
- *    free-text filter appears under the radios. The listbox uses standard
- *    `role="listbox"` + `role="option"` + `aria-multiselectable="true"`
- *    patterns so screen readers announce selection changes.
+ *  - When `Custom` is active, a folder browser (same tree as Sources) appears:
+ *    open subfolders, add entire folders, or pick individual sources in a leaf;
+ *    leaf lists use `role="listbox"` + `role="option"` for accessibility.
  *
  * The picker is fully controlled by the parent (ChatSurface) so the same
  * `scope` object is serialized into every chat POST; no hidden client state.
@@ -64,10 +64,7 @@ export function ScopePicker({
 }: ScopePickerProps) {
   const groupLabelId = useId();
   const comboLabelId = useId();
-  const listboxId = useId();
-  const searchInputId = useId();
 
-  const [filter, setFilter] = useState("");
   const radioContainerRef = useRef<HTMLDivElement | null>(null);
 
   const selectedIds = useMemo(
@@ -81,16 +78,6 @@ export function ScopePicker({
     // shown on the catalog page so operators can diagnose failures.
     return catalog.filter((source) => source.status === "READY");
   }, [catalog]);
-
-  const filteredCatalog = useMemo(() => {
-    const needle = filter.trim().toLowerCase();
-    if (!needle) {
-      return selectableCatalog;
-    }
-    return selectableCatalog.filter((source) =>
-      source.title.toLowerCase().includes(needle),
-    );
-  }, [selectableCatalog, filter]);
 
   const handleSelectMode = useCallback(
     (nextMode: ScopeMode) => {
@@ -107,25 +94,16 @@ export function ScopePicker({
     [onScopeChange, scope.selectedSourceIds],
   );
 
-  const handleToggleSource = useCallback(
-    (sourceId: string) => {
-      const next = new Set(selectedIds);
-      if (next.has(sourceId)) {
-        next.delete(sourceId);
-      } else {
-        next.add(sourceId);
-      }
-      onScopeChange({
-        mode: "custom",
-        selectedSourceIds: Array.from(next),
-      });
-    },
-    [onScopeChange, selectedIds],
-  );
-
   const handleClearSelection = useCallback(() => {
     onScopeChange({ mode: "custom", selectedSourceIds: [] });
   }, [onScopeChange]);
+
+  const handleSetCustomIds = useCallback(
+    (ids: string[]) => {
+      onScopeChange({ mode: "custom", selectedSourceIds: ids });
+    },
+    [onScopeChange],
+  );
 
   // Arrow-key navigation across the radio pills (§6.5).
   const handleRadioKeyDown = useCallback(
@@ -152,15 +130,6 @@ export function ScopePicker({
     },
     [disabled, handleSelectMode, scope.mode],
   );
-
-  // Keep the filter in sync with mode changes: leaving `custom` clears the
-  // search text so the next opening starts fresh instead of carrying stale
-  // input forward.
-  useEffect(() => {
-    if (scope.mode !== "custom" && filter.length > 0) {
-      setFilter("");
-    }
-  }, [scope.mode, filter.length]);
 
   const isCustomActive = scope.mode === "custom";
   const selectionSummary = describeSelection(scope, catalog);
@@ -225,61 +194,18 @@ export function ScopePicker({
             ) : null}
           </div>
 
-          <label htmlFor={searchInputId} className={styles.visuallyHidden}>
-            Filter sources
-          </label>
-          <input
-            id={searchInputId}
-            type="search"
-            className={styles.scopeSearch}
-            placeholder="Filter by title…"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            aria-controls={listboxId}
-            autoComplete="off"
-            disabled={disabled}
-          />
-
-          {filteredCatalog.length === 0 ? (
+          {selectableCatalog.length === 0 ? (
             <p className={styles.scopeEmpty} role="status">
-              {selectableCatalog.length === 0
-                ? "No READY sources available yet."
-                : "No sources match that filter."}
+              No READY sources available yet.
             </p>
           ) : (
-            <ul
-              id={listboxId}
-              role="listbox"
-              aria-multiselectable="true"
-              aria-labelledby={comboLabelId}
-              className={styles.scopeList}
-            >
-              {filteredCatalog.map((source) => {
-                const isSelected = selectedIds.has(source.id);
-                return (
-                  <li key={source.id} role="none" className={styles.scopeListItem}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      className={`${styles.scopeOption} ${
-                        isSelected ? styles.scopeOptionActive : ""
-                      }`}
-                      disabled={disabled}
-                      onClick={() => handleToggleSource(source.id)}
-                    >
-                      <span className={styles.scopeOptionCheckbox} aria-hidden="true">
-                        {isSelected ? "✓" : ""}
-                      </span>
-                      <span className={styles.scopeOptionLabel}>
-                        <span className={styles.scopeOptionTitle}>{source.title}</span>
-                        <span className={styles.scopeOptionMeta}>{source.corpus}</span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <CustomScopeBrowser
+              readySources={selectableCatalog}
+              selectedIds={selectedIds}
+              onSetSelectedIds={handleSetCustomIds}
+              disabled={disabled}
+              isCustomMode={isCustomActive}
+            />
           )}
         </div>
       ) : null}

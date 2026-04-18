@@ -1,18 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/auth";
-import { listCatalogSources } from "@/lib/sources/list-catalog";
+import { listCatalogSourcesAllPages } from "@/lib/sources/list-catalog";
 import { SummariesSurface } from "./summaries-surface";
 import styles from "./summaries.module.css";
 
 // Catalog state shifts whenever operators ingest or reindex; the initial
 // dropdown must reflect the freshest READY list, so opt out of static caching.
 export const dynamic = "force-dynamic";
-
-// Step 15 agent default: "Summaries sub-route under workspace" (§5.4).
-// Catalog ceiling is the same as the chat scope picker's; the form's
-// per-source dropdown only uses READY entries.
-const SUMMARY_CATALOG_LIMIT = 200;
 
 /**
  * Grounded summarization UI (Step 15 #3; master spec §5.4).
@@ -33,7 +28,7 @@ export default async function SummariesPage() {
     redirect("/sign-in");
   }
 
-  const catalog = await listCatalogSources({ limit: SUMMARY_CATALOG_LIMIT });
+  const catalog = await listCatalogSourcesAllPages();
 
   return (
     <div className={styles.shell}>
@@ -52,7 +47,7 @@ export default async function SummariesPage() {
         </Link>
       </header>
 
-      <SummariesSurface catalog={catalog.items} />
+      <SummariesSurface catalog={catalog} />
     </div>
   );
 }
