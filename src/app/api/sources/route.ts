@@ -32,9 +32,12 @@ export async function GET(request: Request): Promise<NextResponse> {
   const limitParam = url.searchParams.get("limit");
   const limit = clampListLimit(limitParam ? Number(limitParam) : undefined);
   const cursor = url.searchParams.get("cursor");
+  // Optional free-text filter (Step 14). Empty/whitespace `q` is treated as
+  // "no filter" by the data layer so callers can pass the raw query string.
+  const q = url.searchParams.get("q");
 
   try {
-    const page = await listCatalogSources({ limit, cursor });
+    const page = await listCatalogSources({ limit, cursor, q });
 
     return NextResponse.json({
       items: page.items.map((item) => ({

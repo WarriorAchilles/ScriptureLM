@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import type { ChatMessageSummary } from "@/lib/chat/thread";
+import type { CatalogSourceSummary } from "@/lib/sources/list-catalog";
+import {
+  DEFAULT_CHAT_SOURCE_SCOPE,
+  type ChatSourceScope,
+} from "@/lib/chat/source-scope";
+import { ScopePicker } from "./scope-picker";
 import styles from "./chat.module.css";
 
 /**
@@ -23,13 +29,24 @@ import styles from "./chat.module.css";
  */
 export function ChatSurface({
   initialMessages,
+  catalog,
 }: {
   initialMessages: ChatMessageSummary[];
+  catalog: readonly CatalogSourceSummary[];
 }) {
   const [messages, setMessages] = useState<ChatMessageSummary[]>(initialMessages);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [scope, setScope] = useState<ChatSourceScope>(DEFAULT_CHAT_SOURCE_SCOPE);
+
+  // `custom` mode requires at least one selected source per source-scope.ts
+  // validation rules; surface the block in the UI rather than silently
+  // defaulting to `all` so the user explicitly sees what's expected.
+  const customScopeInvalid =
+    scope.mode === "custom" &&
+    (scope.selectedSourceIds === undefined ||
+      scope.selectedSourceIds.length === 0);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const listEndRef = useRef<HTMLDivElement | null>(null);
@@ -47,7 +64,7 @@ export function ChatSurface({
 
   const submit = useCallback(async () => {
     const content = draft.trim();
-    if (!content || isSending) {
+    if (!content || isSending || customScopeInvalid) {
       return;
     }
 
@@ -85,7 +102,9 @@ export function ChatSurface({
           "Content-Type": "application/json",
           Accept: "text/event-stream",
         },
-        body: JSON.stringify({ message: content }),
+        // Step 14 #7: every chat request carries the serialized scope so the
+        // server can expand presets → retrieval args and reject bogus ids.
+        body: JSON.stringify({ message: content, sourceScope: scope }),
         signal: controller.signal,
       });
 
@@ -156,7 +175,7 @@ export function ChatSurface({
       setIsSending(false);
       textareaRef.current?.focus();
     }
-  }, [draft, isSending]);
+  }, [draft, isSending, scope, customScopeInvalid]);
 
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -190,6 +209,12 @@ export function ChatSurface({
       </div>
 
       <form className={styles.composer} onSubmit={handleSubmit}>
+        <ScopePicker
+          scope={scope}
+          onScopeChange={setScope}
+          catalog={catalog}
+          disabled={isSending}
+        />
         <label htmlFor="chat-composer" className={styles.visuallyHidden}>
           Write a message
         </label>
@@ -212,11 +237,18 @@ export function ChatSurface({
           <button
             type="submit"
             className={styles.sendButton}
-            disabled={isSending || draft.trim().length === 0}
+            disabled={
+              isSending || draft.trim().length === 0 || customScopeInvalid
+            }
           >
             {isSending ? "Sending…" : "Send"}
           </button>
         </div>
+        {customScopeInvalid ? (
+          <p className={styles.sendError} role="status">
+            Pick at least one source to use Custom scope.
+          </p>
+        ) : null}
         {sendError ? (
           <p className={styles.sendError} role="alert">
             {sendError}

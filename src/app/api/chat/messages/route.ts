@@ -6,9 +6,12 @@ import {
   EmptyMessageError,
   runRagTurn,
   type RagTurnEvent,
-  type SourceScope,
 } from "@/lib/chat/run-rag-turn";
-import type { RetrievalCorpus } from "@/lib/retrieval";
+import {
+  parseChatSourceScope,
+  validateChatSourceScope,
+  type ChatSourceScope,
+} from "@/lib/chat/source-scope";
 
 export const runtime = "nodejs";
 
@@ -75,10 +78,23 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: parsed.error }, { status: parsed.status });
   }
 
+  // Validate custom source-id references against the live catalog before we
+  // persist anything. Bogus / soft-deleted UUIDs must 400 per Step 14 DoD.
+  const validation = await validateChatSourceScope(parsed.sourceScope);
+  if (!validation.ok) {
+    return NextResponse.json(
+      {
+        error: validation.error,
+        ...(validation.unknownIds ? { unknownIds: validation.unknownIds } : {}),
+      },
+      { status: 400 },
+    );
+  }
+
   const stream = buildSseStream({
     userId,
     content: parsed.content,
-    sourceScope: parsed.sourceScope,
+    sourceScope: validation.scope,
     abortSignal: request.signal,
   });
 
@@ -98,7 +114,7 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 type ParsedRequest =
-  | { content: string; sourceScope: SourceScope | undefined }
+  | { content: string; sourceScope: ChatSourceScope }
   | { error: string; status: number };
 
 function parseRequestBody(body: unknown): ParsedRequest {
@@ -123,27 +139,13 @@ function parseRequestBody(body: unknown): ParsedRequest {
       status: 413,
     };
   }
-  const sourceScope = parseSourceScope((body as { sourceScope?: unknown }).sourceScope);
-  return { content: trimmed, sourceScope };
-}
-
-function parseSourceScope(raw: unknown): SourceScope | undefined {
-  if (!raw || typeof raw !== "object") {
-    return undefined;
+  const scopeParse = parseChatSourceScope(
+    (body as { sourceScope?: unknown }).sourceScope,
+  );
+  if (!scopeParse.ok) {
+    return { error: scopeParse.error, status: 400 };
   }
-  const sourceIdsRaw = (raw as { sourceIds?: unknown }).sourceIds;
-  const corpusRaw = (raw as { corpus?: unknown }).corpus;
-  const scope: { sourceIds?: string[]; corpus?: RetrievalCorpus } = {};
-  if (Array.isArray(sourceIdsRaw)) {
-    const sourceIds = sourceIdsRaw.filter((id): id is string => typeof id === "string");
-    if (sourceIds.length > 0) {
-      scope.sourceIds = sourceIds;
-    }
-  }
-  if (corpusRaw === "scripture" || corpusRaw === "sermon" || corpusRaw === "other") {
-    scope.corpus = corpusRaw;
-  }
-  return Object.keys(scope).length > 0 ? scope : undefined;
+  return { content: trimmed, sourceScope: scopeParse.scope };
 }
 
 /**
@@ -154,7 +156,7 @@ function parseSourceScope(raw: unknown): SourceScope | undefined {
 function buildSseStream(params: {
   userId: string;
   content: string;
-  sourceScope: SourceScope | undefined;
+  sourceScope: ChatSourceScope;
   abortSignal: AbortSignal;
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();

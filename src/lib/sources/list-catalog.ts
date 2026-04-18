@@ -34,6 +34,12 @@ export type ListCatalogPage = {
 export type ListCatalogOptions = {
   limit: number;
   cursor?: string | null;
+  /**
+   * Free-text filter matched against derived title fields (bible book, sermon
+   * catalog id, storage key basename). Case-insensitive, trimmed; empty string
+   * behaves as no filter. Master spec §15 #8 + Step 14 #2.
+   */
+  q?: string | null;
 };
 
 type CursorPayload = { updatedAt: string; id: string };
@@ -129,6 +135,7 @@ export async function listCatalogSources(
 ): Promise<ListCatalogPage> {
   const limit = clampListLimit(options.limit);
   const cursor = decodeCatalogCursor(options.cursor ?? null);
+  const searchTerm = (options.q ?? "").trim();
 
   const where: Prisma.SourceWhereInput = { deletedAt: null };
   if (cursor) {
@@ -137,6 +144,22 @@ export async function listCatalogSources(
       { updatedAt: { lt: cursorUpdatedAt } },
       { updatedAt: cursorUpdatedAt, id: { lt: cursor.id } },
     ];
+  }
+  if (searchTerm.length > 0) {
+    // Search across the three fields that feed `deriveSourceTitle`. Case-
+    // insensitive `contains` is cheap here because the catalog is ~1,200 rows
+    // (§4) and queries are further bounded by the keyset cursor.
+    const substring: Prisma.StringFilter = { contains: searchTerm, mode: "insensitive" };
+    const titleFilter: Prisma.SourceWhereInput = {
+      OR: [
+        { bibleBook: substring },
+        { sermonCatalogId: substring },
+        { storageKey: substring },
+      ],
+    };
+    // Merge with the cursor disjunction if present so both constraints apply.
+    where.AND = where.OR ? [{ OR: where.OR }, titleFilter] : [titleFilter];
+    delete where.OR;
   }
 
   // Fetch `limit + 1` to detect whether another page exists without a separate COUNT query.

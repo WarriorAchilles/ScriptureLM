@@ -34,21 +34,21 @@ import {
   type LabeledChunk,
 } from "@/lib/chat/rag-prompt";
 import {
+  DEFAULT_CHAT_SOURCE_SCOPE,
+  expandScopeForRetrieval,
+  type ChatSourceScope,
+} from "@/lib/chat/source-scope";
+import {
   streamClaudeRagResponse,
   type AnthropicClient,
   type ClaudeStreamResult,
 } from "@/lib/llm/claude";
 
-/** Optional source scope passed to retrieval (Step 14 will surface this in UI). */
-export type SourceScope = Readonly<{
-  sourceIds?: readonly string[];
-  corpus?: RetrievalCorpus;
-}>;
-
 export type RunRagTurnParams = Readonly<{
   userId: string;
   userMessageContent: string;
-  sourceScope?: SourceScope;
+  /** Preset-form scope from the UI. Defaults to `{ mode: "all" }`. */
+  sourceScope?: ChatSourceScope;
   /** AbortSignal forwarded to Claude when the client disconnects. */
   signal?: AbortSignal;
 }>;
@@ -83,6 +83,7 @@ type RetrievalDebugRecord = {
   chunkIds: string[];
   scores: number[];
   scope: {
+    mode: ChatSourceScope["mode"];
     sourceIds: string[] | null;
     corpus: RetrievalCorpus | null;
   };
@@ -133,12 +134,15 @@ export async function* runRagTurn(
     { role: "user", content: trimmed },
   ];
 
-  // 3. Retrieve context with the active scope.
+  // 3. Retrieve context with the active scope. Expand preset → retrieval args
+  //    here (one place) so callers don't need to know the preset semantics.
+  const activeScope = params.sourceScope ?? DEFAULT_CHAT_SOURCE_SCOPE;
+  const retrievalScope = expandScopeForRetrieval(activeScope);
   const retrievedChunks = await retrieve({
     query: trimmed,
     limit: retrievalLimit,
-    sourceIds: params.sourceScope?.sourceIds,
-    corpus: params.sourceScope?.corpus,
+    sourceIds: retrievalScope.sourceIds,
+    corpus: retrievalScope.corpus,
   });
 
   // 4a. No retrieval → emit fixed refusal verbatim. Skipping Claude entirely
@@ -150,7 +154,7 @@ export async function* runRagTurn(
       content: REFUSAL_TEXT,
       retrievalDebug: buildRetrievalDebug({
         chunks: [],
-        scope: params.sourceScope,
+        scope: activeScope,
         refusal: true,
       }),
     });
@@ -208,7 +212,7 @@ export async function* runRagTurn(
     content: persistedContent,
     retrievalDebug: buildRetrievalDebug({
       chunks: labeled,
-      scope: params.sourceScope,
+      scope: activeScope,
       refusal: !finalText.trim(),
     }),
   });
@@ -299,17 +303,17 @@ async function loadPriorTurns(
 
 function buildRetrievalDebug(params: {
   chunks: readonly LabeledChunk[];
-  scope: SourceScope | undefined;
+  scope: ChatSourceScope;
   refusal: boolean;
 }): RetrievalDebugRecord {
+  const expanded = expandScopeForRetrieval(params.scope);
   return {
     chunkIds: params.chunks.map(({ chunk }) => chunk.chunkId),
     scores: params.chunks.map(({ chunk }) => chunk.distance),
     scope: {
-      sourceIds: params.scope?.sourceIds
-        ? Array.from(params.scope.sourceIds)
-        : null,
-      corpus: params.scope?.corpus ?? null,
+      mode: params.scope.mode,
+      sourceIds: expanded.sourceIds ? Array.from(expanded.sourceIds) : null,
+      corpus: expanded.corpus ?? null,
     },
     refusal: params.refusal,
   };
