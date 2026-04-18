@@ -1,21 +1,34 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
+import { listThreadMessages } from "@/lib/chat/thread";
 import {
-  appendUserMessage,
   EmptyMessageError,
-  listThreadMessages,
-} from "@/lib/chat/thread";
+  runRagTurn,
+  type RagTurnEvent,
+  type SourceScope,
+} from "@/lib/chat/run-rag-turn";
+import type { RetrievalCorpus } from "@/lib/retrieval";
 
 export const runtime = "nodejs";
 
 /**
- * Chat history endpoint for the signed-in user's single thread (Step 11; master
- * spec §5.1, §7, §15 #4).
+ * Chat endpoint for the signed-in user's single thread.
  *
- * Single evolving endpoint — Step 13 will extend POST to stream an assistant reply,
- * but the URL, request body, and GET contract stay the same so clients don't need to
- * migrate routes between steps.
+ * GET (Step 11): returns the full persisted history.
+ *
+ * POST (Step 11 + 13): persists the user message, runs the RAG pipeline, and
+ * streams the assistant reply as Server-Sent Events. Single evolving endpoint
+ * — same URL/body shape as Step 11, but the success response is now a stream
+ * instead of a single JSON ack (master spec §5.3, §15 #6). Validation errors
+ * still return JSON (4xx) so clients can branch on `Content-Type`.
+ *
+ * Event protocol (one `data:` JSON object per event):
+ *   - `event: user_message` — the persisted user `Message` + thread id.
+ *   - `event: delta`       — `{ "text": "..." }` token chunks.
+ *   - `event: done`        — the persisted assistant `Message`.
+ *   - `event: error`       — `{ "message": "..." }` if anything fails after
+ *                             the user message is persisted.
  */
 
 const MAX_MESSAGE_CHARS = 32_000;
@@ -40,7 +53,7 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(request: Request): Promise<Response> {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) {
@@ -52,65 +65,160 @@ export async function POST(request: Request): Promise<NextResponse> {
     body = await request.json();
   } catch {
     return NextResponse.json(
-      { error: "Expected JSON body with a `content` string" },
+      { error: "Expected JSON body with a `content` (or `message`) string" },
       { status: 400 },
     );
   }
 
-  const content = extractContent(body);
-  if (content === null) {
-    return NextResponse.json(
-      { error: "`content` must be a non-empty string" },
-      { status: 400 },
-    );
-  }
-  if (content.length > MAX_MESSAGE_CHARS) {
-    return NextResponse.json(
-      { error: `Message exceeds ${MAX_MESSAGE_CHARS} character limit` },
-      { status: 413 },
-    );
+  const parsed = parseRequestBody(body);
+  if ("error" in parsed) {
+    return NextResponse.json({ error: parsed.error }, { status: parsed.status });
   }
 
-  try {
-    const { threadId, message } = await appendUserMessage(userId, content);
-    return NextResponse.json({ threadId, message }, { status: 201 });
-  } catch (error) {
-    if (error instanceof EmptyMessageError) {
-      return NextResponse.json(
-        { error: "`content` must be a non-empty string" },
-        { status: 400 },
-      );
-    }
-    // The UNIQUE(notebook_id) index on chat_threads means a second thread is
-    // impossible to create for the same notebook — if we somehow get here via a
-    // concurrent writer, surface 409 rather than leaking a Prisma error.
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return NextResponse.json(
-        { error: "Chat thread already exists for this notebook" },
-        { status: 409 },
-      );
-    }
+  const stream = buildSseStream({
+    userId,
+    content: parsed.content,
+    sourceScope: parsed.sourceScope,
+    abortSignal: request.signal,
+  });
 
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[api/chat/messages POST]", errorMessage);
-    return NextResponse.json(
-      { error: "Failed to persist message" },
-      { status: 500 },
-    );
-  }
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      // `no-cache` lets browsers and proxies stop buffering; `no-transform`
+      // tells CDNs (CloudFront in production) not to gzip mid-flight, which
+      // would defeat token-by-token streaming (master spec §6.2 / §15 #10).
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      // Disables Nginx-style proxy buffering; harmless when not behind one.
+      "X-Accel-Buffering": "no",
+    },
+  });
 }
 
-function extractContent(body: unknown): string | null {
+type ParsedRequest =
+  | { content: string; sourceScope: SourceScope | undefined }
+  | { error: string; status: number };
+
+function parseRequestBody(body: unknown): ParsedRequest {
   if (!body || typeof body !== "object") {
-    return null;
+    return { error: "`content` must be a non-empty string", status: 400 };
   }
-  const candidate = (body as { content?: unknown }).content;
+  // Spec for Step 13 names the field `message`; Step 11 used `content`. Accept
+  // either so the client and the older test suite both keep working.
+  const candidate =
+    (body as { message?: unknown }).message ??
+    (body as { content?: unknown }).content;
   if (typeof candidate !== "string") {
-    return null;
+    return { error: "`content` must be a non-empty string", status: 400 };
   }
   const trimmed = candidate.trim();
-  return trimmed.length === 0 ? null : trimmed;
+  if (trimmed.length === 0) {
+    return { error: "`content` must be a non-empty string", status: 400 };
+  }
+  if (trimmed.length > MAX_MESSAGE_CHARS) {
+    return {
+      error: `Message exceeds ${MAX_MESSAGE_CHARS} character limit`,
+      status: 413,
+    };
+  }
+  const sourceScope = parseSourceScope((body as { sourceScope?: unknown }).sourceScope);
+  return { content: trimmed, sourceScope };
+}
+
+function parseSourceScope(raw: unknown): SourceScope | undefined {
+  if (!raw || typeof raw !== "object") {
+    return undefined;
+  }
+  const sourceIdsRaw = (raw as { sourceIds?: unknown }).sourceIds;
+  const corpusRaw = (raw as { corpus?: unknown }).corpus;
+  const scope: { sourceIds?: string[]; corpus?: RetrievalCorpus } = {};
+  if (Array.isArray(sourceIdsRaw)) {
+    const sourceIds = sourceIdsRaw.filter((id): id is string => typeof id === "string");
+    if (sourceIds.length > 0) {
+      scope.sourceIds = sourceIds;
+    }
+  }
+  if (corpusRaw === "scripture" || corpusRaw === "sermon" || corpusRaw === "other") {
+    scope.corpus = corpusRaw;
+  }
+  return Object.keys(scope).length > 0 ? scope : undefined;
+}
+
+/**
+ * Wraps `runRagTurn` in a `ReadableStream` of SSE bytes. Errors thrown after
+ * the first event (i.e. during retrieval/Claude) become an `event: error`
+ * frame so the client can render them inline instead of seeing a half-stream.
+ */
+function buildSseStream(params: {
+  userId: string;
+  content: string;
+  sourceScope: SourceScope | undefined;
+  abortSignal: AbortSignal;
+}): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const writeEvent = (event: string, data: unknown) => {
+        const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+        controller.enqueue(encoder.encode(payload));
+      };
+
+      try {
+        const generator = runRagTurn(
+          {
+            userId: params.userId,
+            userMessageContent: params.content,
+            sourceScope: params.sourceScope,
+            signal: params.abortSignal,
+          },
+        );
+        for await (const event of generator as AsyncGenerator<RagTurnEvent>) {
+          switch (event.type) {
+            case "user_message":
+              writeEvent("user_message", {
+                threadId: event.threadId,
+                message: event.message,
+              });
+              break;
+            case "delta":
+              writeEvent("delta", { text: event.text });
+              break;
+            case "done":
+              writeEvent("done", {
+                message: event.message,
+                retrievalChunkIds: event.retrievalChunkIds,
+                usedRefusal: event.usedRefusal,
+              });
+              break;
+          }
+        }
+      } catch (error) {
+        // EmptyMessageError shouldn't reach here (we validate earlier), but
+        // keep the branch so a programmer-error throw still surfaces clearly.
+        if (error instanceof EmptyMessageError) {
+          writeEvent("error", { message: error.message });
+        } else if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          // Belt-and-suspenders: the UNIQUE(notebook_id) chat_threads index
+          // makes a second thread structurally impossible, but if a concurrent
+          // writer races us we surface a clean error instead of leaking Prisma.
+          writeEvent("error", {
+            message: "Chat thread already exists for this notebook",
+          });
+        } else {
+          const message =
+            error instanceof Error ? error.message : "RAG chat turn failed";
+          console.error("[api/chat/messages POST stream]", message);
+          writeEvent("error", { message });
+        }
+      } finally {
+        controller.close();
+      }
+    },
+  });
 }

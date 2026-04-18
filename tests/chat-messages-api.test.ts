@@ -1,7 +1,16 @@
 /**
- * Chat messages API (Step 11; master spec §5.1, §7, §15 #4). Mocks `auth()`; uses
- * real Prisma so the UNIQUE(notebook_id) chat_threads index is exercised for real.
- * Requires DATABASE_URL and migrations applied (same setup as the other API tests).
+ * Chat messages API: persistence + thread invariants (Step 11) on top of the
+ * Step 13 SSE streaming path.
+ *
+ * The success path now returns `text/event-stream` instead of a JSON ack, so
+ * tests parse the SSE frames inline. We mock retrieval to return `[]` (refusal
+ * path) and Claude streaming to stay a no-op, which lets the test focus on the
+ * step 11 invariants:
+ *   - lazy notebook + thread creation
+ *   - chronological persistence of user messages
+ *   - the UNIQUE(notebook_id) chat_threads index prevents a second thread
+ *
+ * Mocks are declared with `vi.mock` so the route handler imports the stubs.
  */
 import "dotenv/config";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,8 +21,19 @@ vi.mock("@/auth", () => ({
   auth: vi.fn(),
 }));
 
+vi.mock("@/lib/retrieval", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/retrieval")>("@/lib/retrieval");
+  return {
+    ...actual,
+    retrieveContext: vi.fn(async () => []),
+  };
+});
+
 import { auth } from "@/auth";
 import { GET, POST } from "@/app/api/chat/messages/route";
+import { retrieveContext } from "@/lib/retrieval";
+import { REFUSAL_SUBSTRING } from "@/lib/chat/rag-prompt";
 
 const prisma = new PrismaClient();
 const createdUserIds: string[] = [];
@@ -46,13 +66,56 @@ function mockAuthenticatedUser(userId: string, email: string) {
   });
 }
 
+type SseFrame = { event: string; data: unknown };
+
+/**
+ * Drains the SSE stream into structured frames for assertion. The route uses
+ * the standard `event:` / `data:` syntax from `buildSseStream` in route.ts.
+ */
+async function readSseFrames(response: Response): Promise<SseFrame[]> {
+  expect(response.headers.get("Content-Type") ?? "").toContain(
+    "text/event-stream",
+  );
+  expect(response.body).not.toBeNull();
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffered = "";
+  const frames: SseFrame[] = [];
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffered += decoder.decode(value, { stream: true });
+    let separatorIndex = buffered.indexOf("\n\n");
+    while (separatorIndex !== -1) {
+      const rawFrame = buffered.slice(0, separatorIndex);
+      buffered = buffered.slice(separatorIndex + 2);
+      let event = "message";
+      const dataLines: string[] = [];
+      for (const line of rawFrame.split("\n")) {
+        if (line.startsWith("event:")) {
+          event = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          dataLines.push(line.slice(5).trim());
+        }
+      }
+      if (dataLines.length > 0) {
+        frames.push({ event, data: JSON.parse(dataLines.join("\n")) });
+      }
+      separatorIndex = buffered.indexOf("\n\n");
+    }
+  }
+  return frames;
+}
+
 afterAll(async () => {
   await prisma.$disconnect();
 });
 
 afterEach(async () => {
-  // Delete in a single pass — ON DELETE CASCADE removes notebooks, threads, and
-  // messages so tests stay isolated even when one fails mid-write.
+  // Delete in a single pass — ON DELETE CASCADE removes notebooks, threads,
+  // and messages so tests stay isolated even when one fails mid-write.
   if (createdUserIds.length > 0) {
     await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
     createdUserIds.length = 0;
@@ -62,6 +125,7 @@ afterEach(async () => {
 describe("chat messages API", () => {
   beforeEach(() => {
     vi.mocked(auth).mockReset();
+    vi.mocked(retrieveContext).mockReset().mockResolvedValue([]);
   });
 
   it("returns 401 on GET without a session", async () => {
@@ -91,13 +155,15 @@ describe("chat messages API", () => {
     const contents = ["first message", "second message", "third message"];
     for (const content of contents) {
       const response = await POST(buildPostRequest({ content }));
-      expect(response.status).toBe(201);
-      const body = (await response.json()) as {
-        threadId: string;
-        message: { id: string; role: string; content: string; createdAt: string };
-      };
-      expect(body.message.role).toBe("user");
-      expect(body.message.content).toBe(content);
+      expect(response.status).toBe(200);
+      const frames = await readSseFrames(response);
+      const userFrame = frames.find((frame) => frame.event === "user_message");
+      const doneFrame = frames.find((frame) => frame.event === "done");
+      expect(userFrame).toBeDefined();
+      expect(doneFrame).toBeDefined();
+      expect((userFrame!.data as { message: { content: string } }).message.content).toBe(
+        content,
+      );
     }
 
     const getResponse = await GET();
@@ -108,36 +174,48 @@ describe("chat messages API", () => {
       messages: Array<{ id: string; role: string; content: string; createdAt: string }>;
     };
 
-    expect(body.messages).toHaveLength(3);
-    expect(body.messages.map((message) => message.content)).toEqual(contents);
-    // Timestamps must be non-decreasing so the client can render oldest-first
-    // without sorting and Step 13's streamed assistant reply lands at the tail.
+    // 3 user + 3 assistant (refusal) messages = 6 rows persisted.
+    expect(body.messages).toHaveLength(6);
+    const userMessages = body.messages.filter((message) => message.role === "user");
+    expect(userMessages.map((message) => message.content)).toEqual(contents);
+    // Assistant rows always carry the refusal text since retrieval returns [].
+    const assistantMessages = body.messages.filter(
+      (message) => message.role === "assistant",
+    );
+    expect(assistantMessages).toHaveLength(3);
+    for (const assistant of assistantMessages) {
+      expect(assistant.content).toContain(REFUSAL_SUBSTRING);
+    }
+
+    // Timestamps must be non-decreasing so the client renders oldest-first
+    // without sorting.
     const timestamps = body.messages.map((message) => new Date(message.createdAt).getTime());
     for (let index = 1; index < timestamps.length; index += 1) {
       expect(timestamps[index]).toBeGreaterThanOrEqual(timestamps[index - 1]);
     }
 
-    // Cross-check with the database to catch any serialization drift between the
-    // route response and the actual persisted rows.
+    // Cross-check with the database to catch serialization drift between the
+    // route response and the persisted rows.
     const persisted = await prisma.message.findMany({
       where: { threadId: body.threadId },
       orderBy: { createdAt: "asc" },
       select: { content: true, role: true },
     });
-    expect(persisted.map((message) => message.content)).toEqual(contents);
-    expect(persisted.every((message) => message.role === "user")).toBe(true);
+    expect(persisted.filter((m) => m.role === "user").map((m) => m.content)).toEqual(
+      contents,
+    );
   });
 
   it("lazily creates the notebook and thread on the first POST", async () => {
     const user = await createTestUser("lazy");
     mockAuthenticatedUser(user.id, user.email);
 
-    // Simulate a user who never triggered the sign-in workspace bootstrap.
     const beforeNotebook = await prisma.notebook.findUnique({ where: { userId: user.id } });
     expect(beforeNotebook).toBeNull();
 
     const response = await POST(buildPostRequest({ content: "hello world" }));
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
+    await readSseFrames(response);
 
     const notebook = await prisma.notebook.findUnique({
       where: { userId: user.id },
@@ -151,9 +229,9 @@ describe("chat messages API", () => {
     const user = await createTestUser("uniq");
     mockAuthenticatedUser(user.id, user.email);
 
-    // Drive the API to create notebook + thread + one message.
     const first = await POST(buildPostRequest({ content: "seed" }));
-    expect(first.status).toBe(201);
+    expect(first.status).toBe(200);
+    await readSseFrames(first);
 
     const notebook = await prisma.notebook.findUnique({
       where: { userId: user.id },
@@ -171,9 +249,14 @@ describe("chat messages API", () => {
 
     // Subsequent API calls keep reusing the existing thread.
     const second = await POST(buildPostRequest({ content: "follow-up" }));
-    expect(second.status).toBe(201);
-    const secondBody = (await second.json()) as { threadId: string };
-    expect(secondBody.threadId).toBe(notebook!.thread!.id);
+    expect(second.status).toBe(200);
+    const secondFrames = await readSseFrames(second);
+    const secondUserFrame = secondFrames.find(
+      (frame) => frame.event === "user_message",
+    );
+    expect((secondUserFrame!.data as { threadId: string }).threadId).toBe(
+      notebook!.thread!.id,
+    );
 
     const threadCount = await prisma.chatThread.count({
       where: { notebookId: notebook!.id },
