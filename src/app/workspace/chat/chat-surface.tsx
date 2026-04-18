@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
 import type { ChatMessageSummary } from "@/lib/chat/thread";
 import type { CatalogSourceSummary } from "@/lib/sources/list-catalog";
 import {
@@ -380,10 +383,53 @@ function MessageBubble({ message }: { message: ChatMessageSummary }) {
           {formatTimestamp(message.createdAt)}
         </time>
       </header>
-      <p className={styles.bubbleBody}>
-        {isStreaming ? <span aria-live="polite">Thinking…</span> : message.content}
-      </p>
+      <div className={styles.bubbleBody}>
+        {isStreaming ? (
+          <span aria-live="polite">Thinking…</span>
+        ) : (
+          <MessageMarkdown content={message.content} />
+        )}
+      </div>
     </article>
+  );
+}
+
+/**
+ * Renders assistant/user text as Markdown (headings, lists, code, GFM tables).
+ * Links to http(s) open in a new tab; relative/hash links stay in-page.
+ */
+function MessageMarkdown({ content }: { content: string }) {
+  return (
+    <div className={styles.markdownBody}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        components={{
+          a: ({ href, children, ...anchorProps }) => {
+            const isExternal =
+              href != null &&
+              (href.startsWith("http://") || href.startsWith("https://"));
+            return (
+              <a
+                href={href}
+                {...anchorProps}
+                {...(isExternal
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+              >
+                {children}
+              </a>
+            );
+          },
+          table: ({ children, ...tableProps }) => (
+            <div className={styles.markdownTableScroll}>
+              <table {...tableProps}>{children}</table>
+            </div>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }
 
