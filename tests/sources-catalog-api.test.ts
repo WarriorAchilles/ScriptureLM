@@ -19,6 +19,12 @@ import {
   decodeCatalogCursor,
   clampListLimit,
 } from "@/lib/sources/list-catalog";
+import {
+  formatCatalogPath,
+  fullYearFromVgrSermonId,
+  parseCatalogPath,
+  vgrPrefixForCalendarYear,
+} from "@/lib/sources/catalog-folders";
 
 const prisma = new PrismaClient();
 
@@ -72,6 +78,54 @@ describe("deriveSourceTitle", () => {
   });
 });
 
+describe("catalog folder paths", () => {
+  it("parses The Bible and nested books", () => {
+    expect(parseCatalogPath("").kind).toBe("root");
+    expect(parseCatalogPath("bible").kind).toBe("bible");
+    const book = parseCatalogPath("bible/Genesis");
+    expect(book.kind).toBe("bible-book");
+    if (book.kind === "bible-book") {
+      expect(book.bookLabel).toBe("Genesis");
+    }
+  });
+
+  it("parses The Message, CAB, and years", () => {
+    expect(parseCatalogPath("message").kind).toBe("message");
+    const cab = parseCatalogPath("message/cab");
+    expect(cab.kind).toBe("message-transcripts");
+    if (cab.kind === "message-transcripts") {
+      expect(formatCatalogPath(cab)).toBe("message/cab");
+    }
+    const legacyTranscripts = parseCatalogPath("message/transcripts");
+    expect(legacyTranscripts.kind).toBe("message-transcripts");
+    const year = parseCatalogPath("message/1964");
+    expect(year.kind).toBe("message-year");
+    if (year.kind === "message-year") {
+      expect(year.year).toBe(1964);
+      expect(formatCatalogPath(year)).toBe("message/1964");
+    }
+  });
+
+  it("maps legacy URLs into The Message", () => {
+    expect(parseCatalogPath("sermons").kind).toBe("message");
+    const legacyYear = parseCatalogPath("sermons/1964");
+    expect(legacyYear.kind).toBe("message-year");
+    if (legacyYear.kind === "message-year") {
+      expect(legacyYear.year).toBe(1964);
+    }
+    expect(parseCatalogPath("branham-md").kind).toBe("message-transcripts");
+  });
+
+  it("maps VGR-style ids to calendar years and VGR prefixes", () => {
+    expect(fullYearFromVgrSermonId("64-0216E")).toBe(1964);
+    expect(vgrPrefixForCalendarYear(1964)).toBe("64-");
+  });
+
+  it("treats unknown paths as root", () => {
+    expect(parseCatalogPath("not-a-folder/xyz").kind).toBe("root");
+  });
+});
+
 describe("cursor helpers", () => {
   it("round-trips the cursor payload", () => {
     const payload = {
@@ -122,8 +176,6 @@ describe("GET /api/sources", () => {
       },
     });
 
-    // Seed a ready scripture row and a failed sermon row so we can assert both
-    // the success path and the error-surfacing behavior required by §5.2.
     const readyScripture = await prisma.source.create({
       data: {
         type: "markdown",
@@ -144,7 +196,6 @@ describe("GET /api/sources", () => {
         storageKey: `sources/${crypto.randomUUID()}/sermon.pdf`,
       },
     });
-    // Soft-deleted rows must NOT appear in the read-only catalog (§5.2).
     const hiddenSource = await prisma.source.create({
       data: {
         type: "text",

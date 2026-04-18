@@ -33,6 +33,8 @@ export function PageSizeSelect({ value }: { value: number }) {
     // is no longer the page boundary), so drop the trail and go back to page 1.
     params.delete("cursor");
     params.delete("trail");
+    // Offset-based folder browse also resets to the first page.
+    params.delete("page");
     startTransition(() => {
       router.replace(`/workspace/sources?${params.toString()}`);
     });

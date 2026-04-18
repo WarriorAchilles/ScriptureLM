@@ -1,36 +1,44 @@
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/auth";
 import {
   clampListLimit,
+  countCatalogSources,
   listCatalogSources,
   type CatalogSourceSummary,
 } from "@/lib/sources/list-catalog";
+import {
+  CAB_FOLDER_DESCRIPTION,
+  catalogPathBreadcrumbTrail,
+  formatCatalogPath,
+  isCatalogLeafPath,
+  parseCatalogPath,
+  type ParsedCatalogPath,
+} from "@/lib/sources/catalog-folders";
+import {
+  clampCatalogPage,
+  listCatalogFolderPage,
+  loadCatalogFolderIndex,
+  parseCatalogSortParams,
+} from "@/lib/sources/catalog-browse";
 import { PageSizeSelect } from "./page-size-select";
+import { CatalogSortSelect } from "./catalog-sort-select";
 import styles from "./sources.module.css";
 
-// Defer rendering to request time — the catalog changes whenever operators ingest/reindex,
-// so a static cache would be stale by the time the user arrives.
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
   cursor?: string | string[];
   limit?: string | string[];
-  // Breadcrumb of cursors for pages visited before the current one, most-recent last.
-  // Comma-separated; base64url cursors never contain commas so splitting is safe.
-  // Page 1 is represented implicitly by an empty trail with no `cursor` param.
   trail?: string | string[];
+  path?: string | string[];
+  flat?: string | string[];
+  page?: string | string[];
+  sort?: string | string[];
+  order?: string | string[];
 };
 
-/**
- * Read-only source catalog for the signed-in user (master spec §5.2).
- *
- * This is intentionally a Server Component loader (no client-side fetching) so the
- * first meaningful paint already contains the rows; the "Next page" link performs a
- * full navigation with the cursor encoded in the URL. That keeps the surface area
- * small for ~1,200 rows while leaving room to swap in virtualization later if users
- * drill through the full catalog (see spec §11 perf notes).
- */
 export default async function SourcesCatalogPage({
   searchParams,
 }: {
@@ -42,36 +50,39 @@ export default async function SourcesCatalogPage({
   }
 
   const params = await searchParams;
-  const rawCursor = firstParam(params.cursor);
+  const flat = firstParam(params.flat) === "1";
+  const pathParam = firstParam(params.path);
+  const parsedPath = parseCatalogPath(pathParam);
   const rawLimit = firstParam(params.limit);
+  const rawCursor = firstParam(params.cursor);
   const rawTrail = firstParam(params.trail);
+  const rawPage = firstParam(params.page);
   const limit = clampListLimit(rawLimit ? Number(rawLimit) : undefined);
   const trail = parseTrail(rawTrail);
+  const pageNum = clampCatalogPage(rawPage ? Number(rawPage) : undefined);
+  const { sort, order } = parseCatalogSortParams(
+    firstParam(params.sort),
+    firstParam(params.order),
+  );
 
-  const page = await listCatalogSources({ limit, cursor: rawCursor });
+  if (flat) {
+    const [page, totalSources] = await Promise.all([
+      listCatalogSources({ limit, cursor: rawCursor }),
+      countCatalogSources(),
+    ]);
 
-  return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Workspace</p>
-          <h1 className={styles.title}>Source catalog</h1>
-          <p className={styles.lead}>
-            A curated library of Scripture and sermon transcripts, shared across the
-            deployment. Browse what&rsquo;s available; scoping for chat arrives in a
-            later step.
-          </p>
-        </div>
-        <Link href="/workspace" className={styles.backLink}>
-          Back to workspace
-        </Link>
-      </header>
-
-      <main className={styles.main} aria-labelledby="sources-heading">
+    return (
+      <CatalogShell totalSources={totalSources} showFlatToggle flatActive>
         <div className={styles.sectionHeader}>
-          <h2 id="sources-heading" className={styles.sectionTitle}>
-            Catalog entries
-          </h2>
+          <div className={styles.sectionHeaderIntro}>
+            <h2 id="sources-heading" className={styles.sectionTitle}>
+              All sources (flat)
+            </h2>
+            <p className={styles.catalogTotal} aria-live="polite">
+              {totalSources.toLocaleString()}{" "}
+              {totalSources === 1 ? "source" : "sources"} total
+            </p>
+          </div>
           <PageSizeSelect value={limit} />
         </div>
 
@@ -81,16 +92,439 @@ export default async function SourcesCatalogPage({
           <SourcesTable items={page.items} />
         )}
 
-        <Pagination
+        <KeysetPagination
           limit={limit}
           currentCursor={rawCursor ?? null}
           nextCursor={page.nextCursor}
           trail={trail}
           itemCount={page.items.length}
         />
-      </main>
+      </CatalogShell>
+    );
+  }
+
+  if (parsedPath.kind === "root") {
+    const index = await loadCatalogFolderIndex();
+    return (
+      <CatalogShell totalSources={index.totalSources} showFlatToggle flatActive={false}>
+        <FolderBrowseHeader parsedPath={parsedPath} />
+        <section aria-labelledby="sources-heading">
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeaderIntro}>
+              <h2 id="sources-heading" className={styles.sectionTitle}>
+                Browse by folder
+              </h2>
+              <p className={styles.catalogTotal} aria-live="polite">
+                {index.totalSources.toLocaleString()}{" "}
+                {index.totalSources === 1 ? "source" : "sources"} total
+              </p>
+            </div>
+          </div>
+          <div className={styles.folderGrid}>
+            <FolderCard
+              href={folderHref("bible", { limit })}
+              title="The Bible"
+              count={index.bibleCount}
+              subtitle="Scripture"
+            />
+            <FolderCard
+              href={folderHref("message", { limit })}
+              title="The Message"
+              count={index.messageCount}
+              subtitle="Sermons and message transcripts"
+            />
+          </div>
+          {index.otherCount > 0 ? (
+            <p className={styles.catalogTotal} role="note">
+              {index.otherCount.toLocaleString()}{" "}
+              {index.otherCount === 1 ? "source" : "sources"} use the <em>other</em> corpus
+              (not scripture or sermon). Browse them in the{" "}
+              <Link href="/workspace/sources?flat=1" className={styles.viewToggleLink}>
+                flat table
+              </Link>
+              .
+            </p>
+          ) : null}
+        </section>
+      </CatalogShell>
+    );
+  }
+
+  if (parsedPath.kind === "bible") {
+    const index = await loadCatalogFolderIndex();
+    return (
+      <CatalogShell totalSources={index.totalSources} showFlatToggle flatActive={false}>
+        <FolderBrowseHeader parsedPath={parsedPath} />
+        <section aria-labelledby="sources-heading">
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeaderIntro}>
+              <h2 id="sources-heading" className={styles.sectionTitle}>
+                The Bible — by book
+              </h2>
+              <p className={styles.catalogTotal} aria-live="polite">
+                {index.bibleCount.toLocaleString()}{" "}
+                {index.bibleCount === 1 ? "source" : "sources"}
+              </p>
+            </div>
+          </div>
+          <div className={styles.folderGrid}>
+            {index.bibleBooks.map((entry) => (
+              <FolderCard
+                key={entry.label}
+                href={folderHref(
+                  formatCatalogPath({
+                    kind: "bible-book",
+                    bookLabel: entry.label,
+                  }),
+                  { limit },
+                )}
+                title={entry.label}
+                count={entry.count}
+                subtitle="Open book"
+              />
+            ))}
+          </div>
+        </section>
+      </CatalogShell>
+    );
+  }
+
+  if (parsedPath.kind === "message") {
+    const index = await loadCatalogFolderIndex();
+    return (
+      <CatalogShell totalSources={index.totalSources} showFlatToggle flatActive={false}>
+        <FolderBrowseHeader parsedPath={parsedPath} />
+        <section aria-labelledby="sources-heading">
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeaderIntro}>
+              <h2 id="sources-heading" className={styles.sectionTitle}>
+                The Message
+              </h2>
+              <p className={styles.catalogTotal} aria-live="polite">
+                {index.messageCount.toLocaleString()}{" "}
+                {index.messageCount === 1 ? "source" : "sources"} (all sermons)
+              </p>
+            </div>
+          </div>
+          {index.messageCount === 0 ? (
+            <p className={styles.catalogTotal}>No sermon sources indexed yet.</p>
+          ) : (
+            <div className={styles.folderGrid}>
+              {index.transcriptCount > 0 ? (
+                <FolderCard
+                  href={folderHref("message/cab", { limit })}
+                  title="CAB"
+                  count={index.transcriptCount}
+                  subtitle={CAB_FOLDER_DESCRIPTION}
+                />
+              ) : null}
+              {index.sermonYears.map((entry) => (
+                <FolderCard
+                  key={entry.year}
+                  href={folderHref(`message/${entry.year}`, { limit })}
+                  title={String(entry.year)}
+                  count={entry.count}
+                  subtitle="Dated message codes (e.g. 64-0216E)"
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </CatalogShell>
+    );
+  }
+
+  if (isCatalogLeafPath(parsedPath)) {
+    const folderPage = await listCatalogFolderPage({
+      path: parsedPath,
+      limit,
+      page: pageNum,
+      sort,
+      order,
+    });
+
+    const start = folderPage.totalCount === 0 ? 0 : (folderPage.page - 1) * folderPage.pageSize + 1;
+    const end = Math.min(
+      folderPage.totalCount,
+      folderPage.page * folderPage.pageSize,
+    );
+    const totalPages = Math.max(
+      1,
+      Math.ceil(folderPage.totalCount / folderPage.pageSize),
+    );
+
+    return (
+      <CatalogShell
+        totalSources={folderPage.totalCount}
+        showFlatToggle
+        flatActive={false}
+      >
+        <FolderBrowseHeader parsedPath={parsedPath} />
+        <main aria-labelledby="sources-heading">
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeaderIntro}>
+              <h2 id="sources-heading" className={styles.sectionTitle}>
+                {leafHeading(parsedPath)}
+              </h2>
+              <p className={styles.catalogTotal} aria-live="polite">
+                {folderPage.totalCount.toLocaleString()}{" "}
+                {folderPage.totalCount === 1 ? "source" : "sources"} in this folder
+              </p>
+              {parsedPath.kind === "message-transcripts" ? (
+                <p className={styles.folderLeafDescription}>{CAB_FOLDER_DESCRIPTION}</p>
+              ) : null}
+            </div>
+            <div className={styles.sectionToolbar}>
+              <CatalogSortSelect sort={sort} order={order} />
+              <PageSizeSelect value={limit} />
+            </div>
+          </div>
+
+          {folderPage.items.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <SourcesTable items={folderPage.items} />
+          )}
+
+          <div className={styles.folderPageNav} aria-label="Folder pagination">
+            <FolderPageNavLinks
+              currentPage={folderPage.page}
+              totalPages={totalPages}
+              limit={limit}
+              path={formatCatalogPath(parsedPath)}
+              sort={sort}
+              order={order}
+            />
+            <p className={styles.folderPageMeta}>
+              {folderPage.totalCount > 0
+                ? `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${folderPage.totalCount.toLocaleString()} · Page ${folderPage.page} of ${totalPages}`
+                : "No entries on this page."}
+            </p>
+          </div>
+        </main>
+      </CatalogShell>
+    );
+  }
+
+  redirect("/workspace/sources");
+}
+
+function CatalogShell({
+  children,
+  totalSources,
+  showFlatToggle,
+  flatActive,
+}: {
+  children: ReactNode;
+  totalSources: number;
+  showFlatToggle: boolean;
+  flatActive: boolean;
+}) {
+  return (
+    <div className={styles.shell}>
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>Workspace</p>
+          <h1 className={styles.title}>Source catalog</h1>
+          <p className={styles.lead}>
+            A curated library of Scripture and the Message, shared across the deployment.
+            Open <strong>The Bible</strong> for scripture or <strong>The Message</strong>{" "}
+            for sermons, or use a flat list to scan everything.
+          </p>
+        </div>
+        <Link href="/workspace" className={styles.backLink}>
+          Back to workspace
+        </Link>
+      </header>
+
+      {showFlatToggle ? (
+        <div className={styles.viewToggle}>
+          {flatActive ? (
+            <Link className={styles.viewToggleLink} href="/workspace/sources">
+              Browse by folder
+            </Link>
+          ) : (
+            <Link className={styles.viewToggleLink} href="/workspace/sources?flat=1">
+              Flat table (all sources)
+            </Link>
+          )}
+          <span className={styles.catalogTotal}>
+            {totalSources.toLocaleString()}{" "}
+            {totalSources === 1 ? "source" : "sources"} in the deployment
+          </span>
+        </div>
+      ) : null}
+
+      {children}
     </div>
   );
+}
+
+function FolderBrowseHeader({ parsedPath }: { parsedPath: ParsedCatalogPath }) {
+  const trail = catalogPathBreadcrumbTrail(parsedPath);
+  if (trail.length === 0) {
+    return null;
+  }
+  return (
+    <nav className={styles.breadcrumbs} aria-label="Folder path">
+      <Link href="/workspace/sources">Catalog</Link>
+      {trail.map((segment) => (
+        <span key={segment.pathQuery}>
+          <span className={styles.breadcrumbSep} aria-hidden="true">
+            {" "}
+            /{" "}
+          </span>
+          {segment.pathQuery === formatCatalogPath(parsedPath) ? (
+            <span className={styles.breadcrumbCurrent}>{segment.label}</span>
+          ) : (
+            <Link href={folderHref(segment.pathQuery, {})}>{segment.label}</Link>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
+function leafHeading(path: ParsedCatalogPath): string {
+  switch (path.kind) {
+    case "bible-book":
+      return `The Bible — ${path.bookLabel}`;
+    case "message-transcripts":
+      return "The Message — CAB";
+    case "message-year":
+      return `The Message — ${path.year}`;
+    case "other":
+      return "Other sources";
+    default:
+      return "Sources";
+  }
+}
+
+function FolderCard({
+  href,
+  title,
+  count,
+  subtitle,
+}: {
+  href: string;
+  title: string;
+  count: number;
+  subtitle: string;
+}) {
+  return (
+    <Link href={href} className={styles.folderCard} prefetch={false}>
+      <span className={styles.folderCardTitle}>{title}</span>
+      <span className={styles.folderCardMeta}>
+        {count.toLocaleString()} {count === 1 ? "source" : "sources"}
+      </span>
+      <span className={styles.folderCardMeta}>{subtitle}</span>
+    </Link>
+  );
+}
+
+function folderHref(
+  pathQuery: string,
+  extras: { limit?: number },
+): string {
+  const search = new URLSearchParams();
+  if (pathQuery.length > 0) {
+    search.set("path", pathQuery);
+  }
+  if (extras.limit !== undefined) {
+    search.set("limit", String(extras.limit));
+  }
+  const query = search.toString();
+  return query.length > 0 ? `/workspace/sources?${query}` : "/workspace/sources";
+}
+
+function FolderPageNavLinks({
+  currentPage,
+  totalPages,
+  limit,
+  path,
+  sort,
+  order,
+}: {
+  currentPage: number;
+  totalPages: number;
+  limit: number;
+  path: string;
+  sort: string;
+  order: string;
+}) {
+  const hasPrevious = currentPage > 1;
+  const hasNext = currentPage < totalPages;
+
+  const previousHref = hasPrevious
+    ? offsetCatalogHref({
+        path,
+        limit,
+        page: currentPage - 1,
+        sort,
+        order,
+      })
+    : null;
+  const nextHref = hasNext
+    ? offsetCatalogHref({
+        path,
+        limit,
+        page: currentPage + 1,
+        sort,
+        order,
+      })
+    : null;
+
+  return (
+    <>
+      {previousHref ? (
+        <Link
+          href={previousHref}
+          className={styles.pageLink}
+          prefetch={false}
+          rel="prev"
+        >
+          ← Previous page
+        </Link>
+      ) : (
+        <span
+          className={`${styles.pageLink} ${styles.pageLinkDisabled}`}
+          aria-hidden="true"
+        >
+          ← Previous page
+        </span>
+      )}
+      {nextHref ? (
+        <Link href={nextHref} className={styles.pageLink} prefetch={false} rel="next">
+          Next page →
+        </Link>
+      ) : (
+        <span
+          className={`${styles.pageLink} ${styles.pageLinkDisabled}`}
+          aria-hidden="true"
+        >
+          Next page →
+        </span>
+      )}
+    </>
+  );
+}
+
+function offsetCatalogHref(options: {
+  path: string;
+  limit: number;
+  page: number;
+  sort: string;
+  order: string;
+}): string {
+  const params = new URLSearchParams();
+  params.set("path", options.path);
+  params.set("limit", String(options.limit));
+  params.set("sort", options.sort);
+  params.set("order", options.order);
+  if (options.page > 1) {
+    params.set("page", String(options.page));
+  }
+  return `/workspace/sources?${params.toString()}`;
 }
 
 function SourcesTable({ items }: { items: CatalogSourceSummary[] }) {
@@ -183,16 +617,7 @@ function EmptyState() {
   );
 }
 
-/**
- * Pagination for keyset-paginated catalog pages.
- *
- * Forward-only keyset cursors can't be reversed, so "Previous" is implemented by
- * remembering the trail of cursors the user walked through. The current page's
- * starting cursor lives in `?cursor=`; the cursors of every earlier page (page 2,
- * page 3, ...) are appended to `?trail=`. Page 1 is represented by both being
- * absent. Going back pops the last trail entry and promotes it to `cursor`.
- */
-function Pagination({
+function KeysetPagination({
   limit,
   currentCursor,
   nextCursor,
@@ -233,7 +658,10 @@ function Pagination({
           ← Previous page
         </Link>
       ) : (
-        <span className={`${styles.pageLink} ${styles.pageLinkDisabled}`} aria-hidden="true">
+        <span
+          className={`${styles.pageLink} ${styles.pageLinkDisabled}`}
+          aria-hidden="true"
+        >
           ← Previous page
         </span>
       )}
@@ -248,16 +676,13 @@ function Pagination({
           Next page →
         </Link>
       ) : (
-        <span className={`${styles.pageLink} ${styles.pageLinkDisabled}`} aria-hidden="true">
+        <span
+          className={`${styles.pageLink} ${styles.pageLinkDisabled}`}
+          aria-hidden="true"
+        >
           Next page →
         </span>
       )}
-      {/*
-        Perf note (spec §11): the catalog is expected to grow toward ~1,200 rows. Keyset
-        pagination keeps queries O(log N); when a user actually needs to scan all rows on
-        one page, swap this link for client-side virtualization (e.g. react-virtual) and
-        call `/api/sources?cursor=...` incrementally.
-      */}
     </nav>
   );
 }
@@ -268,13 +693,11 @@ function buildNextHref(
   trail: string[],
   currentCursor: string | null,
 ): string {
-  // When advancing, the current page's cursor becomes the newest trail entry so
-  // we can walk back to it later. Page 1 (currentCursor === null) contributes no
-  // trail entry since it's the implicit base case.
   const nextTrail = currentCursor !== null ? [...trail, currentCursor] : trail;
   const params = new URLSearchParams({
     cursor: nextCursor,
     limit: String(limit),
+    flat: "1",
   });
   if (nextTrail.length > 0) {
     params.set("trail", nextTrail.join(","));
@@ -283,12 +706,10 @@ function buildNextHref(
 }
 
 function buildPreviousHref(limit: number, trail: string[]): string {
-  // Pop the newest trail entry to use as the previous page's cursor. An empty
-  // trail means the previous page is page 1 (no cursor param).
   const previousTrail = trail.slice(0, -1);
   const previousCursor = trail.length > 0 ? trail[trail.length - 1] : null;
 
-  const params = new URLSearchParams({ limit: String(limit) });
+  const params = new URLSearchParams({ limit: String(limit), flat: "1" });
   if (previousCursor) {
     params.set("cursor", previousCursor);
   }

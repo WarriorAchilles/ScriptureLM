@@ -67,11 +67,18 @@
 
 .sectionHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.75rem;
   flex-wrap: wrap;
+}
+
+.sectionHeaderIntro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .sectionTitle {
@@ -80,6 +87,12 @@
   letter-spacing: -0.01em;
   color: var(--foreground);
   margin: 0;
+}
+
+.catalogTotal {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--foreground) 62%, transparent);
 }
 
 .pageSizeControl {
@@ -354,4 +367,180 @@
   color: color-mix(in srgb, var(--foreground) 55%, transparent);
   text-align: right;
   min-height: 1rem;
+}
+
+.viewToggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.viewToggleLink {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.viewToggleLink:hover,
+.viewToggleLink:focus-visible {
+  color: var(--foreground);
+}
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  margin-bottom: 1rem;
+  color: color-mix(in srgb, var(--foreground) 62%, transparent);
+}
+
+.breadcrumbSep {
+  color: color-mix(in srgb, var(--foreground) 38%, transparent);
+  user-select: none;
+}
+
+.breadcrumbCurrent {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.folderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.folderCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 1rem 1rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.folderCard:hover,
+.folderCard:focus-visible {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 22%, transparent);
+  outline: none;
+}
+
+.folderCard:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.folderCardTitle {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  word-break: break-word;
+}
+
+.folderCardMeta {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--foreground) 58%, transparent);
+}
+
+.folderLeafDescription {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+  max-width: 40rem;
+}
+
+.subfolderSection {
+  margin-bottom: 1.25rem;
+}
+
+.subfolderTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  margin: 0 0 0.5rem;
+}
+
+.sortControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sortLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+}
+
+.sortSelect {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.4rem 0.6rem;
+  padding-right: 1.85rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  background-color: color-mix(in srgb, var(--foreground) 2%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  appearance: none;
+  color-scheme: light dark;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5l3 3 3-3'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 0.75rem;
+}
+
+.sortSelect option {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sortSelect option {
+    color: #f8fafc;
+    background-color: #1e293b;
+  }
+}
+
+.sectionToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.folderPageNav {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.folderPageMeta {
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--foreground) 58%, transparent);
 }

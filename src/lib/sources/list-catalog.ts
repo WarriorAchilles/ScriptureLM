@@ -130,19 +130,21 @@ export function extractFilenameFromStorageKey(storageKey: string | null): string
   return stem.replace(/[_-]+/g, " ").trim() || basename;
 }
 
-export async function listCatalogSources(
-  options: ListCatalogOptions,
-): Promise<ListCatalogPage> {
-  const limit = clampListLimit(options.limit);
-  const cursor = decodeCatalogCursor(options.cursor ?? null);
+/**
+ * Shared `where` for catalog list + total count (same visibility rules: not soft-deleted,
+ * optional title search). Keyset `cursor` is omitted when counting the full catalog.
+ */
+function buildCatalogWhere(options: {
+  cursor: CursorPayload | null;
+  q?: string | null;
+}): Prisma.SourceWhereInput {
   const searchTerm = (options.q ?? "").trim();
-
   const where: Prisma.SourceWhereInput = { deletedAt: null };
-  if (cursor) {
-    const cursorUpdatedAt = new Date(cursor.updatedAt);
+  if (options.cursor) {
+    const cursorUpdatedAt = new Date(options.cursor.updatedAt);
     where.OR = [
       { updatedAt: { lt: cursorUpdatedAt } },
-      { updatedAt: cursorUpdatedAt, id: { lt: cursor.id } },
+      { updatedAt: cursorUpdatedAt, id: { lt: options.cursor.id } },
     ];
   }
   if (searchTerm.length > 0) {
@@ -161,6 +163,22 @@ export async function listCatalogSources(
     where.AND = where.OR ? [{ OR: where.OR }, titleFilter] : [titleFilter];
     delete where.OR;
   }
+  return where;
+}
+
+export async function countCatalogSources(options: {
+  q?: string | null;
+} = {}): Promise<number> {
+  const where = buildCatalogWhere({ cursor: null, q: options.q });
+  return prisma.source.count({ where });
+}
+
+export async function listCatalogSources(
+  options: ListCatalogOptions,
+): Promise<ListCatalogPage> {
+  const limit = clampListLimit(options.limit);
+  const cursor = decodeCatalogCursor(options.cursor ?? null);
+  const where = buildCatalogWhere({ cursor, q: options.q });
 
   // Fetch `limit + 1` to detect whether another page exists without a separate COUNT query.
   const rows = await prisma.source.findMany({
