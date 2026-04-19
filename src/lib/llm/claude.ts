@@ -29,7 +29,7 @@ const DEFAULT_CLAUDE_MODEL = "claude-haiku-4-5";
  * Default `max_tokens`: enough for a multi-paragraph grounded answer with
  * inline citations, without letting a runaway response burn the budget.
  */
-const DEFAULT_MAX_TOKENS = 1024;
+const DEFAULT_MAX_TOKENS = 2048;
 
 /** Token usage emitted by the SDK for the completed message. */
 export type ClaudeUsage = Readonly<{

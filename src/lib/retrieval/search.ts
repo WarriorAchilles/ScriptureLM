@@ -250,7 +250,7 @@ export async function retrieveContext(
 
   // No scope + no corpus → quota split to avoid one corpus dominating top-k.
   // Over-fetch each corpus up to `limit` so we can top-up if one side is sparse.
-  const scriptureQuota = Math.ceil(limit / 2);
+  const scriptureQuota = Math.ceil(limit / 3);
   const sermonQuota = limit - scriptureQuota;
   const [scriptureRows, sermonRows] = await Promise.all([
     runVectorSearch(database, vectorLiteral, limit, null, "scripture"),

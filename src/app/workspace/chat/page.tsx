@@ -39,8 +39,8 @@ export default async function ChatPage() {
           <h1 className={styles.title}>Chat</h1>
           <p className={styles.lead}>
             One conversation thread over the shared source catalog. Replies are
-            grounded in retrieved passages from Scripture and the sermon
-            transcripts, with inline citation labels (`[C1]`, `[C2]`, …) you
+            grounded in retrieved passages from Scripture and the Message,
+            with inline citation labels ([C1], [C2], …) you
             can match back to the source.
           </p>
         </div>

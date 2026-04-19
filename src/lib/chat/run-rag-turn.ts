@@ -73,7 +73,7 @@ export type RagTurnEvent =
       usedRefusal: boolean;
     };
 
-const DEFAULT_RETRIEVAL_LIMIT = 8;
+const DEFAULT_RETRIEVAL_LIMIT = 15;
 
 /**
  * Persisted shape of `Message.retrievalDebug` (master spec §7). Kept narrow on

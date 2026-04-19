@@ -518,8 +518,8 @@ function EmptyConversation() {
     <div className={styles.empty} role="status" aria-live="polite">
       <p className={styles.emptyTitle}>No messages yet.</p>
       <p className={styles.emptyBody}>
-        Send your first message below. Assistant replies stream in token-by-
-        token, grounded in the curated source catalog.
+        Send your first message below. Assistant replies stream in token-by-token,
+        grounded in the curated source catalog.
       </p>
     </div>
   );
