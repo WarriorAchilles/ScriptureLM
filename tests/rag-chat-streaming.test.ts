@@ -214,7 +214,12 @@ describe("RAG chat streaming", () => {
     const doneFrame = frames.find((frame) => frame.event === "done");
     expect(doneFrame).toBeDefined();
     const doneData = doneFrame!.data as {
-      message: { id: string; role: string; content: string };
+      message: {
+        id: string;
+        role: string;
+        content: string;
+        citations?: Record<string, { label: string; snippet: string; heading: string }>;
+      };
       retrievalChunkIds: string[];
       usedRefusal: boolean;
     };
@@ -224,6 +229,10 @@ describe("RAG chat streaming", () => {
       sermonChunk.chunkId,
     ]);
     expect(doneData.message.content).toBe(claudeDeltas.join(""));
+    expect(doneData.message.citations?.C1?.snippet).toBe(scriptureChunk.content.trim());
+    expect(doneData.message.citations?.C2?.snippet).toBe(sermonChunk.content.trim());
+    expect(doneData.message.citations?.C1?.heading).toContain("Genesis");
+    expect(doneData.message.citations?.C2?.heading).toContain("63-0728");
 
     // The prompt fed to Claude must include both chunk bodies and stable labels.
     expect(streamClaudeRagResponse).toHaveBeenCalledTimes(1);
@@ -275,13 +284,14 @@ describe("RAG chat streaming", () => {
 
     const doneFrame = frames.find((frame) => frame.event === "done");
     const doneData = doneFrame!.data as {
-      message: { id: string; content: string };
+      message: { id: string; content: string; citations?: Record<string, unknown> };
       usedRefusal: boolean;
       retrievalChunkIds: string[];
     };
     expect(doneData.usedRefusal).toBe(true);
     expect(doneData.retrievalChunkIds).toEqual([]);
     expect(doneData.message.content).toContain(REFUSAL_SUBSTRING);
+    expect(doneData.message.citations).toBeUndefined();
     // No bracketed `[C…]` labels should appear since there were no chunks.
     expect(doneData.message.content).not.toMatch(/\[C\d+\]/);
 

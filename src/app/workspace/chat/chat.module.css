@@ -991,3 +991,68 @@
   margin: 0;
   line-height: 1.35;
 }
+
+/* Inline RAG citation links + scrollable preview (chat-surface citation-anchor) */
+.citationHoverZone {
+  position: relative;
+  display: inline;
+  vertical-align: baseline;
+}
+
+.citationLink {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: inherit;
+  color: color-mix(in srgb, #4f46e5 88%, var(--foreground));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.citationLink:hover,
+.citationLink:focus-visible {
+  color: #4338ca;
+}
+
+.citationLink:focus-visible {
+  outline: 2px solid color-mix(in srgb, #4f46e5 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.citationPopover {
+  min-width: min(18rem, 70vw);
+  max-width: min(22rem, 85vw);
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: var(--background);
+  box-shadow:
+    0 4px 18px color-mix(in srgb, var(--foreground) 12%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.citationPopoverHeading {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+}
+
+.citationPopoverBody {
+  margin: 0;
+  max-height: 12rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--foreground);
+}

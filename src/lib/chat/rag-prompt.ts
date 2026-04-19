@@ -61,6 +61,12 @@ export function renderContextBlock(label: string, chunk: RetrievedChunk): string
   return `[${label}] ${chunk.title}${metadata ? ` — ${metadata}` : ""}\n${chunk.content.trim()}`;
 }
 
+/** One-line title for citation previews (matches the context block heading without `[label]`). */
+export function citationHeadingFromRetrievedChunk(chunk: RetrievedChunk): string {
+  const metadata = describeChunkMetadata(chunk);
+  return metadata ? `${chunk.title} — ${metadata}` : chunk.title;
+}
+
 function describeChunkMetadata(chunk: RetrievedChunk): string {
   const parts: string[] = [];
   if (chunk.bibleBook) {

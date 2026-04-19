@@ -1,5 +1,11 @@
 import prisma from "@/lib/prisma";
 import type { Message, MessageRole, Prisma } from "@prisma/client";
+import {
+  buildCitationsFromOrderedChunkIds,
+  retrievedChunkFromPrismaRow,
+  type ChatCitation,
+} from "@/lib/chat/citations";
+import type { RetrievedChunk } from "@/lib/retrieval";
 
 /**
  * Persistence for the signed-in user's single chat thread (Step 11; master spec §5.1, §7, §15 #4).
@@ -16,6 +22,8 @@ export type ChatMessageSummary = {
   role: MessageRole;
   content: string;
   createdAt: string;
+  /** Present on assistant messages when RAG attached retrievable chunks (UI citation previews). */
+  citations?: Record<string, ChatCitation>;
 };
 
 export type ChatThreadState = {
@@ -56,17 +64,100 @@ export async function ensureUserThread(
  * Returns messages in chronological order (oldest first) so the chat UI can append
  * the streamed assistant reply from Step 13 without reversing the array.
  */
+type RetrievalDebugShape = {
+  chunkIds?: string[];
+  refusal?: boolean;
+};
+
 export async function listThreadMessages(userId: string): Promise<ChatThreadState> {
   const { notebookId, threadId } = await ensureUserThread(userId);
   const messages = await prisma.message.findMany({
     where: { threadId },
     orderBy: { createdAt: "asc" },
-    select: { id: true, role: true, content: true, createdAt: true },
+    select: {
+      id: true,
+      role: true,
+      content: true,
+      createdAt: true,
+      retrievalDebug: true,
+    },
   });
+
+  const chunkIdSet = new Set<string>();
+  for (const row of messages) {
+    if (row.role !== "assistant") {
+      continue;
+    }
+    const debug = row.retrievalDebug as RetrievalDebugShape | null;
+    const ids = debug?.chunkIds;
+    if (!ids?.length) {
+      continue;
+    }
+    for (const chunkId of ids) {
+      chunkIdSet.add(chunkId);
+    }
+  }
+
+  const chunkById = await loadRetrievedChunksById(chunkIdSet);
+
   return {
     notebookId,
     threadId,
-    messages: messages.map(serializeMessage),
+    messages: messages.map((row) =>
+      serializeMessageWithOptionalCitations(row, chunkById),
+    ),
+  };
+}
+
+async function loadRetrievedChunksById(
+  chunkIds: ReadonlySet<string>,
+): Promise<Map<string, RetrievedChunk>> {
+  const map = new Map<string, RetrievedChunk>();
+  if (chunkIds.size === 0) {
+    return map;
+  }
+  const rows = await prisma.chunk.findMany({
+    where: { id: { in: [...chunkIds] } },
+    select: {
+      id: true,
+      content: true,
+      metadata: true,
+      source: {
+        select: {
+          id: true,
+          corpus: true,
+          bibleBook: true,
+          bibleTranslation: true,
+          sermonCatalogId: true,
+          storageKey: true,
+        },
+      },
+    },
+  });
+  for (const row of rows) {
+    map.set(row.id, retrievedChunkFromPrismaRow(row));
+  }
+  return map;
+}
+
+function serializeMessageWithOptionalCitations(
+  message: Pick<Message, "id" | "role" | "content" | "createdAt"> & {
+    retrievalDebug: unknown;
+  },
+  chunkById: ReadonlyMap<string, RetrievedChunk>,
+): ChatMessageSummary {
+  const base = serializeMessage(message);
+  if (message.role !== "assistant") {
+    return base;
+  }
+  const debug = message.retrievalDebug as RetrievalDebugShape | null;
+  const chunkIds = debug?.chunkIds;
+  if (!chunkIds?.length) {
+    return base;
+  }
+  return {
+    ...base,
+    citations: buildCitationsFromOrderedChunkIds(chunkIds, chunkById),
   };
 }
 

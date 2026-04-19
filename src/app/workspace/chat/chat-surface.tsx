@@ -1,16 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, KeyboardEvent } from "react";
-import ReactMarkdown from "react-markdown";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type AnchorHTMLAttributes,
+  type FormEvent,
+  type HTMLAttributes,
+  type KeyboardEvent,
+} from "react";
+import ReactMarkdown, {
+  defaultUrlTransform,
+  type UrlTransform,
+} from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import type { ChatCitation } from "@/lib/chat/citations";
+import { injectCitationMarkdownLinks } from "@/lib/chat/inject-citation-markdown";
 import type { ChatMessageSummary } from "@/lib/chat/thread";
 import type { CatalogSourceSummary } from "@/lib/sources/list-catalog";
 import {
   DEFAULT_CHAT_SOURCE_SCOPE,
   type ChatSourceScope,
 } from "@/lib/chat/source-scope";
+import { CitationAnchor } from "./citation-anchor";
 import { ScopePicker } from "./scope-picker";
 import styles from "./chat.module.css";
 
@@ -387,7 +402,10 @@ function MessageBubble({ message }: { message: ChatMessageSummary }) {
         {isStreaming ? (
           <span aria-live="polite">Thinking…</span>
         ) : (
-          <MessageMarkdown content={message.content} />
+          <MessageMarkdown
+            content={message.content}
+            citations={isUser ? undefined : message.citations}
+          />
         )}
       </div>
     </article>
@@ -397,37 +415,99 @@ function MessageBubble({ message }: { message: ChatMessageSummary }) {
 /**
  * Renders assistant/user text as Markdown (headings, lists, code, GFM tables).
  * Links to http(s) open in a new tab; relative/hash links stay in-page.
+ * When `citations` is present, `[C1]` is rewritten to `[[C1]](cite:C1)` before
+ * parsing so links always render as `CitationAnchor` (after stream `done` or
+ * when history loads with `retrieval_debug` chunk ids).
  */
-function MessageMarkdown({ content }: { content: string }) {
+function MessageMarkdown({
+  content,
+  citations,
+}: {
+  content: string;
+  citations?: Record<string, ChatCitation>;
+}) {
+  const citationLabelSet = useMemo(
+    () => new Set(Object.keys(citations ?? {})),
+    [citations],
+  );
+
+  const markdownSource = useMemo(() => {
+    if (citationLabelSet.size === 0) {
+      return content;
+    }
+    return injectCitationMarkdownLinks(content, citationLabelSet);
+  }, [content, citationLabelSet]);
+
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkBreaks], []);
+
+  /** react-markdown strips non-allowlisted schemes; `cite:` must pass through or `CitationAnchor` never mounts. */
+  const urlTransform = useCallback<UrlTransform>((url) => {
+    if (url.startsWith("cite:")) {
+      return url;
+    }
+    return defaultUrlTransform(url);
+  }, []);
+
+  const components = useMemo(
+    () => ({
+      a: ({
+        href,
+        children,
+        node,
+        ...anchorProps
+      }: AnchorHTMLAttributes<HTMLAnchorElement> & { node?: unknown }) => {
+        void node;
+        if (href?.startsWith("cite:")) {
+          const label = href.slice("cite:".length);
+          return (
+            <CitationAnchor
+              label={label}
+              citation={citations?.[label]}
+              anchorProps={anchorProps}
+            >
+              {children}
+            </CitationAnchor>
+          );
+        }
+        const isExternal =
+          href != null &&
+          (href.startsWith("http://") || href.startsWith("https://"));
+        return (
+          <a
+            href={href}
+            {...anchorProps}
+            {...(isExternal
+              ? { target: "_blank", rel: "noopener noreferrer" }
+              : {})}
+          >
+            {children}
+          </a>
+        );
+      },
+      table: ({
+        children,
+        node,
+        ...tableProps
+      }: HTMLAttributes<HTMLTableElement> & { node?: unknown }) => {
+        void node;
+        return (
+          <div className={styles.markdownTableScroll}>
+            <table {...tableProps}>{children}</table>
+          </div>
+        );
+      },
+    }),
+    [citations],
+  );
+
   return (
     <div className={styles.markdownBody}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
-        components={{
-          a: ({ href, children, ...anchorProps }) => {
-            const isExternal =
-              href != null &&
-              (href.startsWith("http://") || href.startsWith("https://"));
-            return (
-              <a
-                href={href}
-                {...anchorProps}
-                {...(isExternal
-                  ? { target: "_blank", rel: "noopener noreferrer" }
-                  : {})}
-              >
-                {children}
-              </a>
-            );
-          },
-          table: ({ children, ...tableProps }) => (
-            <div className={styles.markdownTableScroll}>
-              <table {...tableProps}>{children}</table>
-            </div>
-          ),
-        }}
+        remarkPlugins={remarkPlugins}
+        components={components}
+        urlTransform={urlTransform}
       >
-        {content}
+        {markdownSource}
       </ReactMarkdown>
     </div>
   );

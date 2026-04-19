@@ -43,6 +43,7 @@ import {
   type AnthropicClient,
   type ClaudeStreamResult,
 } from "@/lib/llm/claude";
+import { buildCitationsFromLabeledChunks } from "@/lib/chat/citations";
 
 export type RunRagTurnParams = Readonly<{
   userId: string;
@@ -223,9 +224,10 @@ export async function* runRagTurn(
     usage: claudeResult?.usage ?? null,
     refusal: !finalText.trim(),
   });
+  const citations = buildCitationsFromLabeledChunks(labeled);
   yield {
     type: "done",
-    message: assistantMessage,
+    message: { ...assistantMessage, citations },
     retrievalChunkIds: labeled.map(({ chunk }) => chunk.chunkId),
     usedRefusal: !finalText.trim(),
   };
