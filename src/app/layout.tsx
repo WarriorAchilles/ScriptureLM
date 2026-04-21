@@ -17,6 +17,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ScriptureLM",
   description: "Theological research workspace — shared catalog, RAG chat, grounded summaries.",
+  icons: {
+    icon: [
+      {
+        url: "/scripturelm-logo-fire-subtle.png",
+        type: "image/png",
+      },
+    ],
+    apple: "/scripturelm-logo-fire-subtle.png",
+  },
 };
 
 export default function RootLayout({

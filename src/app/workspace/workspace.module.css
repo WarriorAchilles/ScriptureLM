@@ -21,6 +21,28 @@
   border-bottom: 1px solid color-mix(in oklch, var(--slm-text) 10%, transparent);
 }
 
+.brandRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brandRow:focus-visible {
+  outline: 2px solid var(--slm-focus-ring);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.brandLogo {
+  height: 2rem;
+  width: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px var(--slm-logo-glow));
+}
+
 .brand {
   font-weight: 600;
   letter-spacing: -0.02em;

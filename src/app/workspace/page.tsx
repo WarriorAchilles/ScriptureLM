@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOutAction } from "@/app/actions/sign-out";
@@ -14,7 +15,17 @@ export default async function WorkspacePage() {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <span className={styles.brand}>ScriptureLM</span>
+        <Link href="/" className={styles.brandRow}>
+          <Image
+            src="/scripturelm-logo-fire-subtle.png"
+            alt=""
+            width={120}
+            height={74}
+            className={styles.brandLogo}
+            priority
+          />
+          <span className={styles.brand}>ScriptureLM</span>
+        </Link>
         <div className={styles.headerActions}>
           <ThemeToggle variant="inline" />
           <form action={signOutAction}>
