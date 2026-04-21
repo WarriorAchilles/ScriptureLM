@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { registerAction, type RegisterState } from "@/app/actions/register";
+import { AuthBrandHeader } from "@/components/auth-brand-header";
 import styles from "@/app/auth.module.css";
 
 const initialState: RegisterState = {};
@@ -14,7 +15,7 @@ export function SignUpForm() {
 
   return (
     <form className={styles.panel} action={formAction}>
-      <h1 className={styles.title}>Create account</h1>
+      <AuthBrandHeader heading="Create account" />
       <p className={styles.subtitle}>
         Solo MVP: one workspace per user after you sign in.
       </p>

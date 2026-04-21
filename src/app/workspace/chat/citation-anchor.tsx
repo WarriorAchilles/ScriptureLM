@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type AnchorHTMLAttributes,
+  type ButtonHTMLAttributes,
   type ReactNode,
 } from "react";
 import type { ChatCitation } from "@/lib/chat/citations";
@@ -150,6 +151,7 @@ export function CitationAnchor({
     rel: _rel,
     download: _download,
     ping: _ping,
+    type: _anchorType,
     ...restAnchor
   } = anchorProps as AnchorHTMLAttributes<HTMLAnchorElement>;
 
@@ -158,7 +160,9 @@ export function CitationAnchor({
     event.stopPropagation();
     measurePanel();
     setPinnedOpen((previous) => !previous);
-    anchorOnClick?.(event);
+    anchorOnClick?.(
+      event as unknown as React.MouseEvent<HTMLAnchorElement>,
+    );
   };
 
   const popover =
@@ -213,7 +217,7 @@ export function CitationAnchor({
     >
       <button
         type="button"
-        {...restAnchor}
+        {...(restAnchor as ButtonHTMLAttributes<HTMLButtonElement>)}
         className={`${styles.citationLink} ${anchorClassName ?? ""}`.trim()}
         aria-describedby={open ? panelId : undefined}
         aria-expanded={open}

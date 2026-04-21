@@ -3,6 +3,14 @@
   flex-direction: column;
   min-height: 100vh;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--slm-page-bg);
+  color: var(--slm-text);
+  background-image: linear-gradient(
+    165deg,
+    var(--slm-page-bg) 0%,
+    var(--slm-page-bg-mid) 52%,
+    var(--slm-page-bg) 100%
+  );
   padding: 2rem 1.5rem 3rem;
   max-width: 72rem;
   margin: 0 auto;
@@ -22,7 +30,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 55%, transparent);
   margin-bottom: 0.25rem;
 }
 
@@ -30,14 +38,14 @@
   font-size: 1.75rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: var(--foreground);
+  color: var(--slm-text);
   margin-bottom: 0.4rem;
 }
 
 .lead {
   font-size: 0.95rem;
   line-height: 1.6;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 70%, transparent);
   max-width: 44rem;
 }
 
@@ -46,19 +54,26 @@
   font-weight: 500;
   padding: 0.45rem 0.9rem;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
-  color: var(--foreground);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
+  color: var(--slm-text);
   white-space: nowrap;
 }
 
 .backLink:hover,
 .backLink:focus-visible {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 6%, transparent);
 }
 
 .backLink:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-text) 55%, transparent);
   outline-offset: 2px;
+}
+
+.headerAside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
 }
 
 .main {
@@ -85,14 +100,14 @@
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--foreground);
+  color: var(--slm-text);
   margin: 0;
 }
 
 .catalogTotal {
   margin: 0;
   font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--foreground) 62%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 62%, transparent);
 }
 
 .pageSizeControl {
@@ -104,7 +119,7 @@
 .pageSizeLabel {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 70%, transparent);
 }
 
 .pageSizeSelect {
@@ -114,9 +129,9 @@
   padding: 0.4rem 0.6rem;
   padding-right: 1.9rem;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
-  background-color: color-mix(in srgb, var(--foreground) 2%, transparent);
-  color: var(--foreground);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
+  background-color: color-mix(in oklch, var(--slm-text) 2%, transparent);
+  color: var(--slm-text);
   cursor: pointer;
   appearance: none;
   /* `color-scheme` lets the browser render the native option popup with the
@@ -134,23 +149,16 @@
    option element. Force a high-contrast pairing so the numbers are legible in
    both light and dark OS themes. */
 .pageSizeSelect option {
-  color: #0f172a;
-  background-color: #ffffff;
-}
-
-@media (prefers-color-scheme: dark) {
-  .pageSizeSelect option {
-    color: #f8fafc;
-    background-color: #1e293b;
-  }
+  color: var(--slm-text);
+  background-color: var(--slm-input-bg);
 }
 
 .pageSizeSelect:hover {
-  background-color: color-mix(in srgb, var(--foreground) 6%, transparent);
+  background-color: color-mix(in oklch, var(--slm-text) 6%, transparent);
 }
 
 .pageSizeSelect:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-text) 55%, transparent);
   outline-offset: 2px;
 }
 
@@ -160,10 +168,10 @@
 }
 
 .tableWrap {
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 12%, transparent);
   border-radius: 12px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 2%, transparent);
 }
 
 .table {
@@ -176,8 +184,8 @@
   padding: 0.75rem 1rem;
   font-size: 0.8125rem;
   text-align: left;
-  color: color-mix(in srgb, var(--foreground) 65%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 65%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--slm-text) 10%, transparent);
   background: transparent;
   caption-side: top;
 }
@@ -188,14 +196,14 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 60%, transparent);
   padding: 0.7rem 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--slm-text) 10%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 3%, transparent);
 }
 
 .table tbody tr {
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 7%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--slm-text) 7%, transparent);
 }
 
 .table tbody tr:last-child {
@@ -212,7 +220,7 @@
 
 .titleCell {
   font-weight: 500;
-  color: var(--foreground);
+  color: var(--slm-text);
   max-width: 28rem;
 }
 
@@ -221,7 +229,7 @@
 }
 
 .muted {
-  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 45%, transparent);
 }
 
 .corpus {
@@ -235,21 +243,21 @@
 }
 
 .corpusScripture {
-  background: color-mix(in srgb, #4f46e5 14%, transparent);
-  color: color-mix(in srgb, #4f46e5 85%, var(--foreground));
-  border-color: color-mix(in srgb, #4f46e5 28%, transparent);
+  background: color-mix(in oklch, var(--slm-accent) 14%, transparent);
+  color: color-mix(in oklch, var(--slm-accent) 85%, var(--slm-text));
+  border-color: color-mix(in oklch, var(--slm-accent) 28%, transparent);
 }
 
 .corpusSermon {
-  background: color-mix(in srgb, #0f766e 14%, transparent);
-  color: color-mix(in srgb, #0f766e 88%, var(--foreground));
-  border-color: color-mix(in srgb, #0f766e 28%, transparent);
+  background: color-mix(in oklch, oklch(0.45 0.09 195) 14%, transparent);
+  color: color-mix(in oklch, oklch(0.45 0.09 195) 88%, var(--slm-text));
+  border-color: color-mix(in oklch, oklch(0.45 0.09 195) 28%, transparent);
 }
 
 .corpusOther {
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
-  color: color-mix(in srgb, var(--foreground) 75%, transparent);
-  border-color: color-mix(in srgb, var(--foreground) 18%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 8%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 75%, transparent);
+  border-color: color-mix(in oklch, var(--slm-text) 18%, transparent);
 }
 
 .badge {
@@ -272,35 +280,35 @@
 }
 
 .badgeReady {
-  background: color-mix(in srgb, #16a34a 14%, transparent);
-  color: color-mix(in srgb, #16a34a 85%, var(--foreground));
-  border-color: color-mix(in srgb, #16a34a 28%, transparent);
+  background: color-mix(in oklch, oklch(0.52 0.14 145) 14%, transparent);
+  color: color-mix(in oklch, oklch(0.52 0.14 145) 85%, var(--slm-text));
+  border-color: color-mix(in oklch, oklch(0.52 0.14 145) 28%, transparent);
 }
 
 .badgeFailed {
-  background: color-mix(in srgb, #dc2626 14%, transparent);
-  color: color-mix(in srgb, #dc2626 85%, var(--foreground));
-  border-color: color-mix(in srgb, #dc2626 32%, transparent);
+  background: color-mix(in oklch, var(--slm-error) 14%, transparent);
+  color: color-mix(in oklch, var(--slm-error) 85%, var(--slm-text));
+  border-color: color-mix(in oklch, var(--slm-error) 32%, transparent);
 }
 
 .badgePending {
-  background: color-mix(in srgb, #d97706 14%, transparent);
-  color: color-mix(in srgb, #d97706 88%, var(--foreground));
-  border-color: color-mix(in srgb, #d97706 30%, transparent);
+  background: color-mix(in oklch, oklch(0.62 0.14 75) 14%, transparent);
+  color: color-mix(in oklch, oklch(0.62 0.14 75) 88%, var(--slm-text));
+  border-color: color-mix(in oklch, oklch(0.62 0.14 75) 30%, transparent);
 }
 
 .errorSnippet {
   display: inline-block;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.8125rem;
-  color: color-mix(in srgb, #dc2626 80%, var(--foreground));
+  color: color-mix(in oklch, var(--slm-error) 80%, var(--slm-text));
   line-height: 1.45;
   word-break: break-word;
 }
 
 .empty {
   padding: 2rem 1.5rem;
-  border: 1px dashed color-mix(in srgb, var(--foreground) 20%, transparent);
+  border: 1px dashed color-mix(in oklch, var(--slm-text) 20%, transparent);
   border-radius: 12px;
   text-align: center;
 }
@@ -308,13 +316,13 @@
 .emptyTitle {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--slm-text);
   margin-bottom: 0.35rem;
 }
 
 .emptyBody {
   font-size: 0.875rem;
-  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 65%, transparent);
   max-width: 34rem;
   margin: 0 auto;
   line-height: 1.55;
@@ -333,8 +341,8 @@
   font-weight: 500;
   padding: 0.5rem 0.95rem;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
-  color: var(--foreground);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
+  color: var(--slm-text);
   background: transparent;
   display: inline-flex;
   align-items: center;
@@ -342,11 +350,11 @@
 }
 
 .pageLink:hover {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 6%, transparent);
 }
 
 .pageLink:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-text) 55%, transparent);
   outline-offset: 2px;
 }
 
@@ -355,8 +363,8 @@
    non-interactive (no :hover, cursor: default, muted) and hidden from AT via
    aria-hidden on the element itself. */
 .pageLinkDisabled {
-  color: color-mix(in srgb, var(--foreground) 38%, transparent);
-  border-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 38%, transparent);
+  border-color: color-mix(in oklch, var(--slm-text) 10%, transparent);
   cursor: default;
   pointer-events: none;
 }
@@ -364,7 +372,7 @@
 .pageFoot {
   margin-top: 1.25rem;
   font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 55%, transparent);
   text-align: right;
   min-height: 1rem;
 }
@@ -380,14 +388,14 @@
 .viewToggleLink {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 72%, transparent);
   text-decoration: underline;
   text-underline-offset: 0.12em;
 }
 
 .viewToggleLink:hover,
 .viewToggleLink:focus-visible {
-  color: var(--foreground);
+  color: var(--slm-text);
 }
 
 .breadcrumbs {
@@ -397,17 +405,17 @@
   gap: 0.35rem;
   font-size: 0.8125rem;
   margin-bottom: 1rem;
-  color: color-mix(in srgb, var(--foreground) 62%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 62%, transparent);
 }
 
 .breadcrumbSep {
-  color: color-mix(in srgb, var(--foreground) 38%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 38%, transparent);
   user-select: none;
 }
 
 .breadcrumbCurrent {
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--slm-text);
 }
 
 .folderGrid {
@@ -424,8 +432,8 @@
   gap: 0.35rem;
   padding: 1rem 1rem 0.85rem;
   border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
-  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 12%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 2%, transparent);
   color: inherit;
   text-align: left;
   font: inherit;
@@ -436,13 +444,13 @@
 
 .folderCard:hover,
 .folderCard:focus-visible {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
-  border-color: color-mix(in srgb, var(--foreground) 22%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 6%, transparent);
+  border-color: color-mix(in oklch, var(--slm-text) 22%, transparent);
   outline: none;
 }
 
 .folderCard:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 45%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-text) 45%, transparent);
   outline-offset: 2px;
 }
 
@@ -450,20 +458,20 @@
   font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--foreground);
+  color: var(--slm-text);
   word-break: break-word;
 }
 
 .folderCardMeta {
   font-size: 0.75rem;
-  color: color-mix(in srgb, var(--foreground) 58%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 58%, transparent);
 }
 
 .folderLeafDescription {
   margin: 0.35rem 0 0;
   font-size: 0.9rem;
   line-height: 1.45;
-  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 72%, transparent);
   max-width: 40rem;
 }
 
@@ -476,7 +484,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 55%, transparent);
   margin: 0 0 0.5rem;
 }
 
@@ -489,7 +497,7 @@
 .sortLabel {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 70%, transparent);
 }
 
 .sortSelect {
@@ -499,9 +507,9 @@
   padding: 0.4rem 0.6rem;
   padding-right: 1.85rem;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
-  background-color: color-mix(in srgb, var(--foreground) 2%, transparent);
-  color: var(--foreground);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
+  background-color: color-mix(in oklch, var(--slm-text) 2%, transparent);
+  color: var(--slm-text);
   cursor: pointer;
   appearance: none;
   color-scheme: light dark;
@@ -512,15 +520,8 @@
 }
 
 .sortSelect option {
-  color: #0f172a;
-  background-color: #ffffff;
-}
-
-@media (prefers-color-scheme: dark) {
-  .sortSelect option {
-    color: #f8fafc;
-    background-color: #1e293b;
-  }
+  color: var(--slm-text);
+  background-color: var(--slm-input-bg);
 }
 
 .sectionToolbar {
@@ -542,5 +543,5 @@
 
 .folderPageMeta {
   font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--foreground) 58%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 58%, transparent);
 }

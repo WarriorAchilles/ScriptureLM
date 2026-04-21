@@ -1,0 +1,83 @@
+/* ScriptureLM semantic tokens — warm parchment (light) and scholarly ink (dark). */
+:root {
+  color-scheme: light;
+
+  /* Page canvas */
+  --slm-page-bg: oklch(0.965 0.018 88);
+  --slm-page-bg-mid: oklch(0.94 0.028 78);
+  --slm-halo: oklch(0.78 0.12 68 / 0.35);
+
+  /* Text */
+  --slm-text: oklch(0.3 0.035 58);
+  --slm-text-muted: oklch(0.46 0.028 58);
+
+  /* Surfaces */
+  --slm-surface: oklch(0.99 0.006 88);
+  --slm-surface-raised: color-mix(in oklch, oklch(0.99 0.008 88) 92%, transparent);
+  --slm-input-bg: oklch(0.99 0.008 88);
+
+  /* Borders & lines */
+  --slm-border: oklch(0.72 0.04 65 / 0.45);
+  --slm-border-strong: color-mix(in oklch, var(--slm-text) 18%, transparent);
+
+  /* Accent (buttons, links) */
+  --slm-accent: oklch(0.52 0.1 58);
+  --slm-accent-hover: oklch(0.46 0.1 58);
+  --slm-on-accent: oklch(0.985 0.012 88);
+
+  /* Focus & status */
+  --slm-focus-ring: oklch(0.72 0.08 62 / 0.35);
+  --slm-error: oklch(0.48 0.18 25);
+
+  /* Shadows & overlays */
+  --slm-panel-inset: oklch(0.98 0.01 88 / 0.9);
+  --slm-panel-shadow: oklch(0.35 0.03 58 / 0.08);
+  --slm-logo-glow: oklch(0.55 0.06 58 / 0.12);
+  --slm-banner-bg: oklch(0.94 0.04 78 / 0.65);
+  --slm-submit-inset: oklch(0.99 0.01 88 / 0.2);
+
+  /* Chat / workspace chrome */
+  --slm-surface-chat: color-mix(in oklch, var(--slm-text) 2.5%, transparent);
+  --slm-overlay-scrim: oklch(0.2 0.02 58 / 0.45);
+
+  /* Legacy aliases (migration) */
+  --background: var(--slm-page-bg);
+  --foreground: var(--slm-text);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --slm-page-bg: oklch(0.22 0.022 58);
+  --slm-page-bg-mid: oklch(0.19 0.024 56);
+  --slm-halo: oklch(0.38 0.08 62 / 0.28);
+
+  --slm-text: oklch(0.91 0.018 82);
+  --slm-text-muted: oklch(0.62 0.03 65);
+
+  --slm-surface: oklch(0.27 0.022 58);
+  --slm-surface-raised: oklch(0.3 0.022 58);
+  --slm-input-bg: oklch(0.28 0.022 58);
+
+  --slm-border: oklch(0.42 0.035 58 / 0.55);
+  --slm-border-strong: color-mix(in oklch, var(--slm-text) 22%, transparent);
+
+  --slm-accent: oklch(0.68 0.11 62);
+  --slm-accent-hover: oklch(0.62 0.11 62);
+  --slm-on-accent: oklch(0.14 0.025 55);
+
+  --slm-focus-ring: oklch(0.52 0.1 62 / 0.45);
+  --slm-error: oklch(0.68 0.14 22);
+
+  --slm-panel-inset: oklch(0.35 0.02 58 / 0.35);
+  --slm-panel-shadow: oklch(0.05 0.02 58 / 0.5);
+  --slm-logo-glow: oklch(0.42 0.07 65 / 0.28);
+  --slm-banner-bg: oklch(0.3 0.035 58 / 0.75);
+  --slm-submit-inset: oklch(0.4 0.04 62 / 0.2);
+
+  --slm-surface-chat: color-mix(in oklch, var(--slm-text) 6%, transparent);
+  --slm-overlay-scrim: oklch(0.1 0.02 58 / 0.55);
+
+  --background: var(--slm-page-bg);
+  --foreground: var(--slm-text);
+}

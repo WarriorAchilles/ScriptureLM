@@ -22,6 +22,7 @@ import {
   loadCatalogFolderIndex,
   parseCatalogSortParams,
 } from "@/lib/sources/catalog-browse";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { PageSizeSelect } from "./page-size-select";
 import { CatalogSortSelect } from "./catalog-sort-select";
 import styles from "./sources.module.css";
@@ -462,9 +463,12 @@ function CatalogShell({
             for sermons, or use a flat list to scan everything.
           </p>
         </div>
-        <Link href="/workspace" className={styles.backLink}>
-          Back to workspace
-        </Link>
+        <div className={styles.headerAside}>
+          <ThemeToggle variant="inline" />
+          <Link href="/workspace" className={styles.backLink}>
+            Back to workspace
+          </Link>
+        </div>
       </header>
 
       {showFlatToggle ? (

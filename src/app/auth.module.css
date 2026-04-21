@@ -1,3 +1,4 @@
+/* Auth surfaces use global --slm-* tokens from theme.css (data-theme light/dark). */
 .page {
   display: flex;
   flex: 1;
@@ -5,72 +6,172 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 2rem;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  font-family: var(--font-auth), Georgia, "Times New Roman", serif;
+  color: var(--slm-text);
+  background-color: var(--slm-page-bg);
+  background-image:
+    radial-gradient(
+      ellipse 85% 65% at 50% 38%,
+      var(--slm-halo),
+      transparent 58%
+    ),
+    linear-gradient(
+      165deg,
+      var(--slm-page-bg) 0%,
+      var(--slm-page-bg-mid) 48%,
+      var(--slm-page-bg) 100%
+    );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page {
+    animation: auth-page-in 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes auth-page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.logoWrap {
+  margin: 0 auto 1rem;
+  max-width: min(18rem, 88vw);
+}
+
+.logo {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 2px 20px var(--slm-logo-glow));
+}
+
+.wordmark {
+  font-size: clamp(1.35rem, 3.5vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--slm-text);
+  margin-bottom: 0.35rem;
+}
+
+.title {
+  font-size: clamp(1.125rem, 2.4vw, 1.25rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0;
+  color: var(--slm-text);
 }
 
 .panel {
   width: 100%;
-  max-width: 22rem;
-  padding: 1.75rem;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  max-width: 24rem;
+  padding: clamp(1.5rem, 3.5vw, 2rem);
+  border-radius: 14px;
+  border: 1px solid var(--slm-border);
+  background: color-mix(in oklch, var(--slm-input-bg) 92%, transparent);
+  box-shadow:
+    0 1px 0 var(--slm-panel-inset) inset,
+    0 18px 42px var(--slm-panel-shadow);
 }
 
-.title {
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.35rem;
-  color: var(--foreground);
+@media (prefers-reduced-motion: no-preference) {
+  .panel {
+    animation: auth-panel-in 640ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+  }
+}
+
+@keyframes auth-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .subtitle {
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: color-mix(in srgb, var(--foreground) 65%, transparent);
-  margin-bottom: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--slm-text-muted);
+  margin-bottom: 1.35rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
   margin-bottom: 1rem;
 }
 
 .label {
   font-size: 0.8125rem;
-  font-weight: 500;
-  color: color-mix(in srgb, var(--foreground) 85%, transparent);
+  font-weight: 600;
+  color: color-mix(in oklch, var(--slm-text) 88%, transparent);
 }
 
 .input {
-  padding: 0.55rem 0.65rem;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
-  background: var(--background);
-  color: var(--foreground);
+  padding: 0.62rem 0.75rem;
+  border-radius: 9px;
+  border: 1px solid color-mix(in oklch, var(--slm-text) 22%, transparent);
+  background: var(--slm-input-bg);
+  color: var(--slm-text);
   font-size: 1rem;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.input::placeholder {
+  color: color-mix(in oklch, var(--slm-text-muted) 75%, transparent);
+}
+
+.input:hover {
+  border-color: color-mix(in oklch, var(--slm-text) 30%, transparent);
 }
 
 .input:focus {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 35%, transparent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: color-mix(in oklch, var(--slm-accent) 65%, var(--slm-text));
+  box-shadow: 0 0 0 3px var(--slm-focus-ring);
 }
 
 .submit {
   width: 100%;
-  margin-top: 0.25rem;
-  padding: 0.6rem 1rem;
+  margin-top: 0.35rem;
+  padding: 0.65rem 1rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  background: var(--foreground);
-  color: var(--background);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--slm-accent);
+  color: var(--slm-on-accent);
+  box-shadow: 0 1px 0 var(--slm-submit-inset) inset;
+  transition:
+    background 160ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--slm-accent-hover);
+}
+
+.submit:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .submit:disabled {
@@ -80,33 +181,48 @@
 
 .error {
   font-size: 0.8125rem;
-  color: #b42318;
-  margin-bottom: 0.75rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  .error {
-    color: #f97066;
-  }
+  color: var(--slm-error);
+  margin-bottom: 0.85rem;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 .footer {
-  margin-top: 1.25rem;
+  margin-top: 1.35rem;
   font-size: 0.8125rem;
   text-align: center;
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  color: var(--slm-text-muted);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 .footer a {
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  color: color-mix(in oklch, var(--slm-accent) 45%, var(--slm-text));
+  font-weight: 500;
+}
+
+.footer a:hover {
+  color: var(--slm-text);
 }
 
 .banner {
   font-size: 0.8125rem;
-  padding: 0.5rem 0.65rem;
-  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 9px;
   margin-bottom: 1rem;
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
-  color: color-mix(in srgb, var(--foreground) 88%, transparent);
+  max-width: 24rem;
+  width: 100%;
+  border: 1px solid color-mix(in oklch, var(--slm-accent) 35%, transparent);
+  background: var(--slm-banner-bg);
+  color: color-mix(in oklch, var(--slm-text) 92%, transparent);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.loading {
+  width: 100%;
+  max-width: 24rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--slm-text-muted);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }

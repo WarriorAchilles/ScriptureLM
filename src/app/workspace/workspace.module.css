@@ -3,6 +3,14 @@
   flex-direction: column;
   min-height: 100vh;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--slm-page-bg);
+  color: var(--slm-text);
+  background-image: linear-gradient(
+    165deg,
+    var(--slm-page-bg) 0%,
+    var(--slm-page-bg-mid) 52%,
+    var(--slm-page-bg) 100%
+  );
 }
 
 .header {
@@ -10,13 +18,19 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--slm-text) 10%, transparent);
 }
 
 .brand {
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: var(--foreground);
+  color: var(--slm-text);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .signOut {
@@ -24,49 +38,108 @@
   font-size: 0.8125rem;
   font-weight: 500;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
   background: transparent;
-  color: var(--foreground);
+  color: var(--slm-text);
   cursor: pointer;
 }
 
 .signOut:hover {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 6%, transparent);
 }
 
 .main {
   flex: 1;
-  padding: 2rem 1.5rem;
-  max-width: 40rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 4vw, 2.5rem) 1.5rem;
+  text-align: center;
+}
+
+.content {
+  width: 100%;
+  max-width: 26rem;
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: clamp(1.35rem, 3vw, 1.65rem);
   font-weight: 600;
   letter-spacing: -0.02em;
-  margin-bottom: 0.75rem;
-  color: var(--foreground);
+  margin-bottom: 0.65rem;
+  color: var(--slm-text);
 }
 
 .lead {
   font-size: 1rem;
   line-height: 1.6;
-  color: color-mix(in srgb, var(--foreground) 72%, transparent);
-  margin-bottom: 0.75rem;
+  color: color-mix(in oklch, var(--slm-text) 72%, transparent);
+  margin-bottom: 0;
 }
 
-.inlineLink {
-  color: var(--foreground);
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 35%, transparent);
-  font-weight: 500;
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  width: 100%;
 }
 
-.inlineLink:hover,
-.inlineLink:focus-visible {
-  border-bottom-color: var(--foreground);
+.actionPrimary,
+.actionSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.72rem 1.15rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: 10px;
+  text-decoration: none;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.inlineLink:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+.actionPrimary {
+  background: var(--slm-accent);
+  color: var(--slm-on-accent);
+  border: 1px solid transparent;
+  box-shadow: 0 1px 0 var(--slm-submit-inset) inset;
+}
+
+.actionPrimary:hover {
+  background: var(--slm-accent-hover);
+}
+
+.actionPrimary:active {
+  transform: translateY(1px);
+}
+
+.actionPrimary:focus-visible {
+  outline: 2px solid var(--slm-focus-ring);
+  outline-offset: 2px;
+}
+
+.actionSecondary {
+  background: color-mix(in oklch, var(--slm-input-bg) 88%, transparent);
+  color: var(--slm-text);
+  border: 1px solid var(--slm-border);
+}
+
+.actionSecondary:hover {
+  border-color: color-mix(in oklch, var(--slm-text) 28%, transparent);
+  background: color-mix(in oklch, var(--slm-input-bg) 95%, transparent);
+}
+
+.actionSecondary:active {
+  transform: translateY(1px);
+}
+
+.actionSecondary:focus-visible {
+  outline: 2px solid var(--slm-focus-ring);
   outline-offset: 2px;
 }

@@ -3,6 +3,14 @@
   flex-direction: column;
   min-height: 100vh;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--slm-page-bg);
+  color: var(--slm-text);
+  background-image: linear-gradient(
+    165deg,
+    var(--slm-page-bg) 0%,
+    var(--slm-page-bg-mid) 52%,
+    var(--slm-page-bg) 100%
+  );
   padding: 2rem 1.5rem 3rem;
   max-width: 60rem;
   margin: 0 auto;
@@ -22,7 +30,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 55%, transparent);
   margin-bottom: 0.25rem;
 }
 
@@ -30,14 +38,14 @@
   font-size: 1.75rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: var(--foreground);
+  color: var(--slm-text);
   margin-bottom: 0.4rem;
 }
 
 .lead {
   font-size: 0.95rem;
   line-height: 1.55;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 70%, transparent);
   max-width: 42rem;
 }
 
@@ -46,28 +54,35 @@
   font-weight: 500;
   padding: 0.45rem 0.9rem;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
-  color: var(--foreground);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
+  color: var(--slm-text);
   white-space: nowrap;
 }
 
 .backLink:hover,
 .backLink:focus-visible {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 6%, transparent);
 }
 
 .backLink:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 55%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-text) 55%, transparent);
   outline-offset: 2px;
+}
+
+.headerAside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
 }
 
 .surface {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 12%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 2%, transparent);
   padding: 1.25rem;
 }
 
@@ -75,7 +90,7 @@
   display: inline-flex;
   gap: 0.25rem;
   padding: 0.25rem;
-  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 5%, transparent);
   border-radius: 10px;
   align-self: flex-start;
 }
@@ -85,7 +100,7 @@
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--foreground);
+  color: var(--slm-text);
   cursor: pointer;
   font: inherit;
   font-size: 0.875rem;
@@ -93,18 +108,18 @@
 }
 
 .tab:hover:not(:disabled):not([aria-selected="true"]) {
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 8%, transparent);
 }
 
 .tab:focus-visible {
-  outline: 2px solid color-mix(in srgb, #4f46e5 65%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-accent) 65%, transparent);
   outline-offset: 2px;
 }
 
 .tabActive {
   background: var(--background);
-  border-color: color-mix(in srgb, var(--foreground) 15%, transparent);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--foreground) 6%, transparent);
+  border-color: color-mix(in oklch, var(--slm-text) 15%, transparent);
+  box-shadow: 0 1px 0 color-mix(in oklch, var(--slm-text) 6%, transparent);
 }
 
 .tab:disabled {
@@ -119,7 +134,7 @@
 }
 
 .fieldset {
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 12%, transparent);
   border-radius: 12px;
   padding: 0.75rem 0.9rem 0.9rem;
   margin: 0;
@@ -135,7 +150,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 70%, transparent);
   padding: 0 0.25rem;
 }
 
@@ -153,24 +168,24 @@
   gap: 0.1rem;
   padding: 0.45rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
   background: var(--background);
-  color: var(--foreground);
+  color: var(--slm-text);
   cursor: pointer;
   min-width: 9rem;
 }
 
 .chip:hover {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 6%, transparent);
 }
 
 .chipActive {
-  border-color: color-mix(in srgb, #4f46e5 55%, transparent);
-  background: color-mix(in srgb, #4f46e5 16%, transparent);
+  border-color: color-mix(in oklch, var(--slm-accent) 55%, transparent);
+  background: color-mix(in oklch, var(--slm-accent) 16%, transparent);
 }
 
 .chip:focus-within {
-  outline: 2px solid color-mix(in srgb, #4f46e5 65%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-accent) 65%, transparent);
   outline-offset: 2px;
 }
 
@@ -181,7 +196,7 @@
 
 .chipHint {
   font-size: 0.75rem;
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 60%, transparent);
 }
 
 .fieldLabel {
@@ -190,7 +205,7 @@
   gap: 0.35rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 70%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -200,9 +215,9 @@
 .filterInput {
   font: inherit;
   font-size: 0.9375rem;
-  color: var(--foreground);
+  color: var(--slm-text);
   background: var(--background);
-  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
   border-radius: 10px;
   padding: 0.55rem 0.7rem;
   letter-spacing: normal;
@@ -213,9 +228,9 @@
 .select:focus-visible,
 .focusInput:focus-visible,
 .filterInput:focus-visible {
-  outline: 2px solid color-mix(in srgb, #4f46e5 60%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-accent) 60%, transparent);
   outline-offset: 1px;
-  border-color: color-mix(in srgb, #4f46e5 55%, transparent);
+  border-color: color-mix(in oklch, var(--slm-accent) 55%, transparent);
 }
 
 .focusInput {
@@ -230,7 +245,7 @@
   gap: 0.55rem;
   margin-top: 0.7rem;
   padding-top: 0.7rem;
-  border-top: 1px dashed color-mix(in srgb, var(--foreground) 15%, transparent);
+  border-top: 1px dashed color-mix(in oklch, var(--slm-text) 15%, transparent);
 }
 
 .customList {
@@ -242,7 +257,7 @@
   gap: 0.15rem;
   max-height: 16rem;
   overflow-y: auto;
-  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 10%, transparent);
   border-radius: 8px;
   background: var(--background);
 }
@@ -256,24 +271,24 @@
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--foreground);
+  color: var(--slm-text);
   cursor: pointer;
   text-align: left;
   font: inherit;
 }
 
 .customOption:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  background: color-mix(in oklch, var(--slm-text) 6%, transparent);
 }
 
 .customOption:focus-visible {
-  outline: 2px solid color-mix(in srgb, #4f46e5 65%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-accent) 65%, transparent);
   outline-offset: 1px;
 }
 
 .customOptionActive {
-  background: color-mix(in srgb, #4f46e5 12%, transparent);
-  border-color: color-mix(in srgb, #4f46e5 35%, transparent);
+  background: color-mix(in oklch, var(--slm-accent) 12%, transparent);
+  border-color: color-mix(in oklch, var(--slm-accent) 35%, transparent);
 }
 
 .customCheckbox {
@@ -283,16 +298,16 @@
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 4px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 30%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 30%, transparent);
   font-size: 0.8rem;
-  color: color-mix(in srgb, #4f46e5 90%, var(--foreground));
+  color: color-mix(in oklch, var(--slm-accent) 90%, var(--slm-text));
   background: var(--background);
   flex-shrink: 0;
 }
 
 .customOptionActive .customCheckbox {
-  border-color: color-mix(in srgb, #4f46e5 55%, transparent);
-  background: color-mix(in srgb, #4f46e5 22%, transparent);
+  border-color: color-mix(in oklch, var(--slm-accent) 55%, transparent);
+  background: color-mix(in oklch, var(--slm-accent) 22%, transparent);
 }
 
 .customLabel {
@@ -314,12 +329,12 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 55%, transparent);
 }
 
 .customCount {
   font-size: 0.75rem;
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 60%, transparent);
   margin: 0;
 }
 
@@ -336,18 +351,18 @@
   font-size: 0.9375rem;
   font-weight: 600;
   border-radius: 9px;
-  border: 1px solid color-mix(in srgb, #4f46e5 55%, transparent);
-  background: color-mix(in srgb, #4f46e5 22%, transparent);
-  color: var(--foreground);
+  border: 1px solid color-mix(in oklch, var(--slm-accent) 55%, transparent);
+  background: color-mix(in oklch, var(--slm-accent) 22%, transparent);
+  color: var(--slm-text);
   cursor: pointer;
 }
 
 .submit:hover:not(:disabled) {
-  background: color-mix(in srgb, #4f46e5 32%, transparent);
+  background: color-mix(in oklch, var(--slm-accent) 32%, transparent);
 }
 
 .submit:focus-visible {
-  outline: 2px solid color-mix(in srgb, #4f46e5 65%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--slm-accent) 65%, transparent);
   outline-offset: 2px;
 }
 
@@ -358,24 +373,24 @@
 
 .usageNote {
   font-size: 0.75rem;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 55%, transparent);
   font-variant-numeric: tabular-nums;
 }
 
 .errorMessage {
   font-size: 0.8125rem;
-  color: color-mix(in srgb, #dc2626 85%, var(--foreground));
+  color: color-mix(in oklch, var(--slm-error) 85%, var(--slm-text));
   margin: 0;
 }
 
 .emptyNote {
   font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 60%, transparent);
   margin: 0.25rem 0;
 }
 
 .resultPane {
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--slm-text) 12%, transparent);
   border-radius: 12px;
   padding: 1rem 1.1rem 1.2rem;
   background: var(--background);
@@ -396,39 +411,39 @@
   font-size: 1.05rem;
   font-weight: 600;
   margin: 0;
-  color: var(--foreground);
+  color: var(--slm-text);
 }
 
 .resultSources {
   font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 60%, transparent);
 }
 
 .resultBody {
   font-size: 0.9375rem;
   line-height: 1.6;
-  color: var(--foreground);
+  color: var(--slm-text);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .resultStatus {
   font-size: 0.9375rem;
-  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 65%, transparent);
   margin: 0;
 }
 
 .sourcesList {
-  border-top: 1px dashed color-mix(in srgb, var(--foreground) 15%, transparent);
+  border-top: 1px dashed color-mix(in oklch, var(--slm-text) 15%, transparent);
   padding-top: 0.55rem;
   font-size: 0.8125rem;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 70%, transparent);
 }
 
 .sourcesListHead {
   font-weight: 600;
   margin: 0 0 0.25rem;
-  color: color-mix(in srgb, var(--foreground) 78%, transparent);
+  color: color-mix(in oklch, var(--slm-text) 78%, transparent);
 }
 
 .sourcesList ul {

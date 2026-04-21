@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { listCatalogSourcesAllPages } from "@/lib/sources/list-catalog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { SummariesSurface } from "./summaries-surface";
 import styles from "./summaries.module.css";
 
@@ -42,9 +43,12 @@ export default async function SummariesPage() {
             contributing material.
           </p>
         </div>
-        <Link href="/workspace" className={styles.backLink}>
-          Back to workspace
-        </Link>
+        <div className={styles.headerAside}>
+          <ThemeToggle variant="inline" />
+          <Link href="/workspace" className={styles.backLink}>
+            Back to workspace
+          </Link>
+        </div>
       </header>
 
       <SummariesSurface catalog={catalog} />

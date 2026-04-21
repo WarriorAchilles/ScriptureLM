@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { AuthBrandHeader } from "@/components/auth-brand-header";
 import styles from "@/app/auth.module.css";
 
 export function SignInForm() {
@@ -38,7 +39,7 @@ export function SignInForm() {
 
   return (
     <form className={styles.panel} onSubmit={handleSubmit}>
-      <h1 className={styles.title}>Sign in</h1>
+      <AuthBrandHeader heading="Sign in" />
       <p className={styles.subtitle}>
         Use the email and password for your ScriptureLM account.
       </p>

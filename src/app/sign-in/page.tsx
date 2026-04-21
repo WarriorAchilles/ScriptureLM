@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import styles from "@/app/auth.module.css";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { SignInForm } from "./sign-in-form";
 
 function RegisteredBanner({ show }: { show: boolean }) {
@@ -23,8 +24,9 @@ export default async function SignInPage({
 
   return (
     <div className={styles.page}>
+      <ThemeToggle />
       <RegisteredBanner show={showRegistered} />
-      <Suspense fallback={<div className={styles.panel}>Loading…</div>}>
+      <Suspense fallback={<div className={styles.loading}>Loading…</div>}>
         <SignInForm />
       </Suspense>
     </div>

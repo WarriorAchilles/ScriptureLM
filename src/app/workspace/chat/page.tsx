@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { listThreadMessages } from "@/lib/chat/thread";
 import { listCatalogSourcesAllPages } from "@/lib/sources/list-catalog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ChatSurface } from "./chat-surface";
 import styles from "./chat.module.css";
 
@@ -44,9 +45,12 @@ export default async function ChatPage() {
             can match back to the source.
           </p>
         </div>
-        <Link href="/workspace" className={styles.backLink}>
-          Back to workspace
-        </Link>
+        <div className={styles.headerAside}>
+          <ThemeToggle variant="inline" />
+          <Link href="/workspace" className={styles.backLink}>
+            Back to workspace
+          </Link>
+        </div>
       </header>
 
       <ChatSurface
