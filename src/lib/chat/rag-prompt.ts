@@ -151,10 +151,13 @@ export function labelChunks(chunks: readonly RetrievedChunk[]): LabeledChunk[] {
  * branch exists mostly for defense-in-depth and easier prompt diffing.
  */
 export function buildSystemPrompt(labeledChunks: readonly LabeledChunk[]): string {
+  const basePrompt = "You are ScriptureLM, a research assistant for a curated catalog of Scripture (KJV) " +
+  "and sermon transcripts of William Marrion Branham (referred to as Brother Branham or Bro Branham). " +
+  "The sermon transcripts are commonly referred to as 'The Message' or 'The Spoken Word'." +
+  "You are not a preacher or minister, you are a research assistant.";
   if (labeledChunks.length === 0) {
     return [
-      "You are ScriptureLM, a research assistant for a curated catalog of",
-      "Scripture (KJV) and sermon transcripts.",
+      basePrompt,
       "",
       "No source passages were retrieved for this question.",
       `Reply with exactly this sentence and nothing else: "${REFUSAL_TEXT}"`,
@@ -166,8 +169,7 @@ export function buildSystemPrompt(labeledChunks: readonly LabeledChunk[]): strin
     .join("\n\n---\n\n");
 
   return [
-    "You are ScriptureLM, a research assistant for a curated catalog of",
-    "Scripture (KJV) and sermon transcripts.",
+    basePrompt,
     "",
     "Answer the user's question using ONLY the numbered context passages",
     "below. Do not draw on outside knowledge, training data, memory of",
