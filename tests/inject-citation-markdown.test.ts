@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { injectCitationMarkdownLinks } from "@/lib/chat/inject-citation-markdown";
+import {
+  collectCitationLabelsFromContentAndRecord,
+  injectCitationMarkdownLinks,
+} from "@/lib/chat/inject-citation-markdown";
+
+describe("collectCitationLabelsFromContentAndRecord", () => {
+  it("adds labels from [Cn] markers even when citations metadata is absent", () => {
+    const labels = collectCitationLabelsFromContentAndRecord(
+      "Hello [C2] and [C10].",
+      undefined,
+    );
+    expect([...labels].sort()).toEqual(["C10", "C2"]);
+  });
+
+  it("merges citation record keys with bracket markers in content", () => {
+    const labels = collectCitationLabelsFromContentAndRecord("See [C1].", {
+      C1: { label: "C1", snippet: "x", heading: "y" },
+    });
+    expect(labels.has("C1")).toBe(true);
+  });
+});
 
 describe("injectCitationMarkdownLinks", () => {
   it("turns [C1] into a cite: markdown link", () => {

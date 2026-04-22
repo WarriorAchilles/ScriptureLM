@@ -1,3 +1,30 @@
+import type { ChatCitation } from "@/lib/chat/citations";
+
+/**
+ * Builds the set of `C1`…`Cn` labels to rewrite: persisted citation keys plus any
+ * `[Cn]` markers already present in the assistant markdown.
+ *
+ * Including content-derived labels keeps streaming bubbles and edge cases
+ * working when `citations` is still undefined (optimistic assistant) or missing
+ * keys — `CitationAnchor` can still mount and show a generic preview.
+ */
+export function collectCitationLabelsFromContentAndRecord(
+  content: string,
+  citations: Readonly<Record<string, ChatCitation>> | undefined,
+): Set<string> {
+  const labels = new Set<string>();
+  if (citations) {
+    for (const key of Object.keys(citations)) {
+      labels.add(key);
+    }
+  }
+  const marker = /(?<!\[)\[(C\d+)\]/g;
+  for (const match of content.matchAll(marker)) {
+    labels.add(match[1]!);
+  }
+  return labels;
+}
+
 /**
  * Rewrites plain `[C1]` markers into CommonMark links `[[C1]](cite:C1)` **before**
  * remark-parse runs. That guarantees the AST contains real `link` nodes with

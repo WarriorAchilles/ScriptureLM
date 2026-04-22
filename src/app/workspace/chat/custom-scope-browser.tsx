@@ -18,12 +18,19 @@ import {
   parentCatalogPath,
   scopeLeafHeading,
 } from "@/lib/sources/scope-folder-model";
+import {
+  folderPathFullyCoveredByExistingFolders,
+  sourceIdCoveredByFolderKeys,
+} from "@/lib/sources/custom-scope-selection";
 import styles from "./chat.module.css";
 
 type CustomScopeBrowserProps = {
   readySources: readonly CatalogSourceSummary[];
+  /** Folder paths added as a single scope unit (see `catalogPathKey`). */
+  folderPathKeys: readonly string[];
   selectedIds: ReadonlySet<string>;
-  onSetSelectedIds: (ids: string[]) => void;
+  onAddFolder: (path: ParsedCatalogPath) => void;
+  onToggleLooseSource: (sourceId: string) => void;
   disabled: boolean;
   /** When false, folder navigation resets when the user returns to Custom. */
   isCustomMode: boolean;
@@ -31,8 +38,10 @@ type CustomScopeBrowserProps = {
 
 export function CustomScopeBrowser({
   readySources,
+  folderPathKeys,
   selectedIds,
-  onSetSelectedIds,
+  onAddFolder,
+  onToggleLooseSource,
   disabled,
   isCustomMode,
 }: CustomScopeBrowserProps) {
@@ -83,23 +92,19 @@ export function CustomScopeBrowser({
 
   const addAllInFolder = useCallback(
     (path: ParsedCatalogPath) => {
-      const ids = listReadySourceIdsInFolder(readySources, path);
-      onSetSelectedIds(Array.from(new Set([...selectedIds, ...ids])));
+      if (folderPathFullyCoveredByExistingFolders(readySources, folderPathKeys, path)) {
+        return;
+      }
+      onAddFolder(path);
     },
-    [readySources, selectedIds, onSetSelectedIds],
+    [readySources, folderPathKeys, onAddFolder],
   );
 
   const toggleSource = useCallback(
     (sourceId: string) => {
-      const next = new Set(selectedIds);
-      if (next.has(sourceId)) {
-        next.delete(sourceId);
-      } else {
-        next.add(sourceId);
-      }
-      onSetSelectedIds(Array.from(next));
+      onToggleLooseSource(sourceId);
     },
-    [selectedIds, onSetSelectedIds],
+    [onToggleLooseSource],
   );
 
   const navigateToPathQuery = useCallback((pathQuery: string) => {
@@ -165,7 +170,10 @@ export function CustomScopeBrowser({
           <button
             type="button"
             className={styles.scopeFolderAddAll}
-            disabled={disabled}
+            disabled={
+              disabled ||
+              folderPathFullyCoveredByExistingFolders(readySources, folderPathKeys, browsePath)
+            }
             onClick={() => addAllInFolder(browsePath)}
           >
             Add entire folder
@@ -203,7 +211,14 @@ export function CustomScopeBrowser({
                   <button
                     type="button"
                     className={styles.scopeFolderRowAddAll}
-                    disabled={disabled}
+                    disabled={
+                      disabled ||
+                      folderPathFullyCoveredByExistingFolders(
+                        readySources,
+                        folderPathKeys,
+                        item.path,
+                      )
+                    }
                     onClick={() => addAllInFolder(item.path)}
                   >
                     Add all
@@ -220,7 +235,11 @@ export function CustomScopeBrowser({
             <button
               type="button"
               className={styles.scopeFolderAddAll}
-              disabled={disabled || leafSources.length === 0}
+              disabled={
+                disabled ||
+                leafSources.length === 0 ||
+                folderPathFullyCoveredByExistingFolders(readySources, folderPathKeys, browsePath)
+              }
               onClick={() => addAllInFolder(browsePath)}
             >
               Add all in folder
@@ -257,6 +276,11 @@ export function CustomScopeBrowser({
               className={styles.scopeList}
             >
               {filteredLeafSources.map((source) => {
+                const coveredByFolder = sourceIdCoveredByFolderKeys(
+                  readySources,
+                  folderPathKeys,
+                  source.id,
+                );
                 const isSelected = selectedIds.has(source.id);
                 return (
                   <li key={source.id} role="none" className={styles.scopeListItem}>
@@ -267,7 +291,12 @@ export function CustomScopeBrowser({
                       className={`${styles.scopeOption} ${
                         isSelected ? styles.scopeOptionActive : ""
                       }`}
-                      disabled={disabled}
+                      disabled={disabled || coveredByFolder}
+                      title={
+                        coveredByFolder
+                          ? "Already included via a folder in custom scope"
+                          : undefined
+                      }
                       onClick={() => toggleSource(source.id)}
                     >
                       <span className={styles.scopeOptionCheckbox} aria-hidden="true">

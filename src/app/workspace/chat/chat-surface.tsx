@@ -18,17 +18,37 @@ import ReactMarkdown, {
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import type { ChatCitation } from "@/lib/chat/citations";
-import { injectCitationMarkdownLinks } from "@/lib/chat/inject-citation-markdown";
+import {
+  collectCitationLabelsFromContentAndRecord,
+  injectCitationMarkdownLinks,
+} from "@/lib/chat/inject-citation-markdown";
 import type { ChatMessageSummary } from "@/lib/chat/thread";
 import type { CatalogSourceSummary } from "@/lib/sources/list-catalog";
 import {
+  catalogPathBreadcrumbTrail,
+  parseCatalogPath,
+  type ParsedCatalogPath,
+} from "@/lib/sources/catalog-folders";
+import {
+  buildCustomSelectedSourceIds,
+  mergeFolderPathKeysOnAdd,
+  pruneLooseIdsCoveredByFolders,
+  sourceIdCoveredByFolderKeys,
+} from "@/lib/sources/custom-scope-selection";
+import { listReadySourceIdsInFolder } from "@/lib/sources/scope-folder-model";
+import {
   DEFAULT_CHAT_SOURCE_SCOPE,
   type ChatSourceScope,
+  type ScopeMode,
 } from "@/lib/chat/source-scope";
 import type { ChatResponseLength } from "@/lib/chat/response-length";
 import { CitationAnchor } from "./citation-anchor";
 import { ScopePicker } from "./scope-picker";
 import styles from "./chat.module.css";
+
+type ComposerScopeChip =
+  | { kind: "folder"; pathKey: string; label: string }
+  | { kind: "source"; sourceId: string; label: string };
 
 /**
  * Client chat surface: message list + composer with streamed assistant replies.
@@ -59,7 +79,32 @@ export function ChatSurface({
   const [sendError, setSendError] = useState<string | null>(null);
   const [clearError, setClearError] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
-  const [scope, setScope] = useState<ChatSourceScope>(DEFAULT_CHAT_SOURCE_SCOPE);
+  const [scopePickerMode, setScopePickerMode] = useState<ScopeMode>(
+    DEFAULT_CHAT_SOURCE_SCOPE.mode,
+  );
+  const [customSelection, setCustomSelection] = useState<{
+    folderPathKeys: string[];
+    looseSourceIds: string[];
+  }>({ folderPathKeys: [], looseSourceIds: [] });
+
+  const readyCatalog = useMemo(
+    () => catalog.filter((source) => source.status === "READY"),
+    [catalog],
+  );
+
+  const scope: ChatSourceScope = useMemo(() => {
+    if (scopePickerMode !== "custom") {
+      return { mode: scopePickerMode };
+    }
+    return {
+      mode: "custom",
+      selectedSourceIds: buildCustomSelectedSourceIds(
+        readyCatalog,
+        customSelection.folderPathKeys,
+        customSelection.looseSourceIds,
+      ),
+    };
+  }, [scopePickerMode, readyCatalog, customSelection]);
   const [responseLength, setResponseLength] =
     useState<ChatResponseLength>("short");
 
@@ -222,28 +267,86 @@ export function ChatSurface({
     [submit],
   );
 
-  const customSelectionChips = useMemo(() => {
-    if (scope.mode !== "custom" || !scope.selectedSourceIds?.length) {
+  const customComposerChips = useMemo((): ComposerScopeChip[] => {
+    if (scope.mode !== "custom") {
       return [];
     }
-    return scope.selectedSourceIds.map((sourceId) => {
-      const match = catalog.find((source) => source.id === sourceId);
-      const label = match?.title ?? "Unknown source";
-      return { sourceId, label };
-    });
-  }, [scope.mode, scope.selectedSourceIds, catalog]);
+    const folderChips: ComposerScopeChip[] = customSelection.folderPathKeys.map(
+      (pathKey) => ({
+        kind: "folder" as const,
+        pathKey,
+        label: catalogPathBreadcrumbTrail(parseCatalogPath(pathKey))
+          .map((segment) => segment.label)
+          .join(" · "),
+      }),
+    );
+    const looseChips: ComposerScopeChip[] = customSelection.looseSourceIds.map(
+      (sourceId) => {
+        const match = catalog.find((source) => source.id === sourceId);
+        return {
+          kind: "source" as const,
+          sourceId,
+          label: match?.title ?? "Unknown source",
+        };
+      },
+    );
+    return [...folderChips, ...looseChips];
+  }, [scope.mode, customSelection.folderPathKeys, customSelection.looseSourceIds, catalog]);
 
-  const removeCustomSource = useCallback((sourceId: string) => {
-    setScope((previous) => {
-      if (previous.mode !== "custom") {
-        return previous;
+  const handleAddCustomFolder = useCallback(
+    (path: ParsedCatalogPath) => {
+      if (listReadySourceIdsInFolder(readyCatalog, path).length === 0) {
+        return;
       }
-      const ids = previous.selectedSourceIds ?? [];
-      return {
-        mode: "custom",
-        selectedSourceIds: ids.filter((id) => id !== sourceId),
-      };
-    });
+      setCustomSelection((previous) => {
+        const nextFolders = mergeFolderPathKeysOnAdd(previous.folderPathKeys, path);
+        const nextLoose = pruneLooseIdsCoveredByFolders(
+          readyCatalog,
+          nextFolders,
+          previous.looseSourceIds,
+        );
+        return { folderPathKeys: nextFolders, looseSourceIds: nextLoose };
+      });
+    },
+    [readyCatalog],
+  );
+
+  const handleToggleCustomLooseSource = useCallback(
+    (sourceId: string) => {
+      setCustomSelection((previous) => {
+        if (
+          sourceIdCoveredByFolderKeys(readyCatalog, previous.folderPathKeys, sourceId)
+        ) {
+          return previous;
+        }
+        const nextLoose = new Set(previous.looseSourceIds);
+        if (nextLoose.has(sourceId)) {
+          nextLoose.delete(sourceId);
+        } else {
+          nextLoose.add(sourceId);
+        }
+        return { ...previous, looseSourceIds: Array.from(nextLoose) };
+      });
+    },
+    [readyCatalog],
+  );
+
+  const handleClearCustomSelection = useCallback(() => {
+    setCustomSelection({ folderPathKeys: [], looseSourceIds: [] });
+  }, []);
+
+  const removeCustomFolderChip = useCallback((pathKey: string) => {
+    setCustomSelection((previous) => ({
+      ...previous,
+      folderPathKeys: previous.folderPathKeys.filter((key) => key !== pathKey),
+    }));
+  }, []);
+
+  const removeLooseCustomSourceChip = useCallback((sourceId: string) => {
+    setCustomSelection((previous) => ({
+      ...previous,
+      looseSourceIds: previous.looseSourceIds.filter((id) => id !== sourceId),
+    }));
   }, []);
 
   const clearHistory = useCallback(async () => {
@@ -286,7 +389,12 @@ export function ChatSurface({
         <aside className={styles.scopeSidebar}>
           <ScopePicker
             scope={scope}
-            onScopeChange={setScope}
+            onScopeModeChange={setScopePickerMode}
+            customFolderPathKeys={customSelection.folderPathKeys}
+            customLooseSourceIds={customSelection.looseSourceIds}
+            onAddCustomFolder={handleAddCustomFolder}
+            onToggleCustomLooseSource={handleToggleCustomLooseSource}
+            onClearCustomSelection={handleClearCustomSelection}
             catalog={catalog}
             disabled={isSending}
           />
@@ -339,28 +447,53 @@ export function ChatSurface({
           </div>
 
           <form className={styles.composer} onSubmit={handleSubmit}>
-            {customSelectionChips.length > 0 ? (
+            {customComposerChips.length > 0 ? (
               <div
                 className={styles.customScopeChipsWrap}
                 role="list"
                 aria-label="Sources included in this message"
               >
-                {customSelectionChips.map(({ sourceId, label }) => (
-                  <div key={sourceId} className={styles.customScopeChip} role="listitem">
-                    <span className={styles.customScopeChipLabel} title={label}>
-                      {label}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.customScopeChipRemove}
-                      onClick={() => removeCustomSource(sourceId)}
-                      disabled={isSending}
-                      aria-label={`Remove ${label} from custom scope`}
+                {customComposerChips.map((chip) =>
+                  chip.kind === "folder" ? (
+                    <div
+                      key={`folder-${chip.pathKey}`}
+                      className={styles.customScopeChip}
+                      role="listitem"
                     >
-                      <span aria-hidden="true">×</span>
-                    </button>
-                  </div>
-                ))}
+                      <span className={styles.customScopeChipLabel} title={chip.label}>
+                        {chip.label}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.customScopeChipRemove}
+                        onClick={() => removeCustomFolderChip(chip.pathKey)}
+                        disabled={isSending}
+                        aria-label={`Remove folder ${chip.label} from custom scope`}
+                      >
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      key={chip.sourceId}
+                      className={styles.customScopeChip}
+                      role="listitem"
+                    >
+                      <span className={styles.customScopeChipLabel} title={chip.label}>
+                        {chip.label}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.customScopeChipRemove}
+                        onClick={() => removeLooseCustomSourceChip(chip.sourceId)}
+                        disabled={isSending}
+                        aria-label={`Remove ${chip.label} from custom scope`}
+                      >
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    </div>
+                  ),
+                )}
               </div>
             ) : null}
             <label htmlFor="chat-composer" className={styles.visuallyHidden}>
@@ -452,8 +585,8 @@ function MessageMarkdown({
   citations?: Record<string, ChatCitation>;
 }) {
   const citationLabelSet = useMemo(
-    () => new Set(Object.keys(citations ?? {})),
-    [citations],
+    () => collectCitationLabelsFromContentAndRecord(content, citations),
+    [content, citations],
   );
 
   const markdownSource = useMemo(() => {

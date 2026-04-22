@@ -2,7 +2,9 @@
 
 import { useCallback, useId, useMemo, useRef } from "react";
 import type { CatalogSourceSummary } from "@/lib/sources/list-catalog";
+import type { ParsedCatalogPath } from "@/lib/sources/catalog-folders";
 import type { ChatSourceScope, ScopeMode } from "@/lib/chat/source-scope";
+import { buildCustomSelectedSourceIds } from "@/lib/sources/custom-scope-selection";
 import { CustomScopeBrowser } from "./custom-scope-browser";
 import styles from "./chat.module.css";
 
@@ -17,8 +19,9 @@ import styles from "./chat.module.css";
  *    open subfolders, add entire folders, or pick individual sources in a leaf;
  *    leaf lists use `role="listbox"` + `role="option"` for accessibility.
  *
- * The picker is fully controlled by the parent (ChatSurface) so the same
- * `scope` object is serialized into every chat POST; no hidden client state.
+ * The picker is controlled by the parent (ChatSurface): preset mode plus, for
+ * Custom, folder path keys and loose source ids that the parent folds into
+ * `ChatSourceScope.selectedSourceIds` for each POST.
  */
 
 const PRESETS: ReadonlyArray<{
@@ -50,7 +53,12 @@ const PRESETS: ReadonlyArray<{
 
 export type ScopePickerProps = {
   scope: ChatSourceScope;
-  onScopeChange: (next: ChatSourceScope) => void;
+  onScopeModeChange: (mode: ScopeMode) => void;
+  customFolderPathKeys: readonly string[];
+  customLooseSourceIds: readonly string[];
+  onAddCustomFolder: (path: ParsedCatalogPath) => void;
+  onToggleCustomLooseSource: (sourceId: string) => void;
+  onClearCustomSelection: () => void;
   catalog: readonly CatalogSourceSummary[];
   /** Disables all controls while a turn is streaming. */
   disabled?: boolean;
@@ -58,7 +66,12 @@ export type ScopePickerProps = {
 
 export function ScopePicker({
   scope,
-  onScopeChange,
+  onScopeModeChange,
+  customFolderPathKeys,
+  customLooseSourceIds,
+  onAddCustomFolder,
+  onToggleCustomLooseSource,
+  onClearCustomSelection,
   catalog,
   disabled = false,
 }: ScopePickerProps) {
@@ -67,11 +80,6 @@ export function ScopePicker({
 
   const radioContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const selectedIds = useMemo(
-    () => new Set(scope.selectedSourceIds ?? []),
-    [scope.selectedSourceIds],
-  );
-
   const selectableCatalog = useMemo(() => {
     // Only READY sources can contribute retrieval hits (Step 12), so they're
     // the only meaningful candidates for `custom`. Non-READY rows are still
@@ -79,31 +87,28 @@ export function ScopePicker({
     return catalog.filter((source) => source.status === "READY");
   }, [catalog]);
 
+  const selectedIds = useMemo(
+    () =>
+      new Set(
+        buildCustomSelectedSourceIds(
+          selectableCatalog,
+          customFolderPathKeys,
+          customLooseSourceIds,
+        ),
+      ),
+    [selectableCatalog, customFolderPathKeys, customLooseSourceIds],
+  );
+
   const handleSelectMode = useCallback(
     (nextMode: ScopeMode) => {
-      if (nextMode === "custom") {
-        onScopeChange({
-          mode: "custom",
-          // Preserve any prior selection so toggling presets doesn't forget work.
-          selectedSourceIds: scope.selectedSourceIds ?? [],
-        });
-        return;
-      }
-      onScopeChange({ mode: nextMode });
+      onScopeModeChange(nextMode);
     },
-    [onScopeChange, scope.selectedSourceIds],
+    [onScopeModeChange],
   );
 
   const handleClearSelection = useCallback(() => {
-    onScopeChange({ mode: "custom", selectedSourceIds: [] });
-  }, [onScopeChange]);
-
-  const handleSetCustomIds = useCallback(
-    (ids: string[]) => {
-      onScopeChange({ mode: "custom", selectedSourceIds: ids });
-    },
-    [onScopeChange],
-  );
+    onClearCustomSelection();
+  }, [onClearCustomSelection]);
 
   // Arrow-key navigation across the radio pills (§6.5).
   const handleRadioKeyDown = useCallback(
@@ -201,8 +206,10 @@ export function ScopePicker({
           ) : (
             <CustomScopeBrowser
               readySources={selectableCatalog}
+              folderPathKeys={customFolderPathKeys}
               selectedIds={selectedIds}
-              onSetSelectedIds={handleSetCustomIds}
+              onAddFolder={onAddCustomFolder}
+              onToggleLooseSource={onToggleCustomLooseSource}
               disabled={disabled}
               isCustomMode={isCustomActive}
             />
