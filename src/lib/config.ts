@@ -28,6 +28,12 @@ export type ServerEnv = Readonly<{
   /** Must match `chunks.embedding` column width and Titan `dimensions` (Step 08). */
   embeddingDimensions: number;
   anthropicApiKey: string;
+  /** Chat tier: Short (Haiku). Default when `ANTHROPIC_MODEL_HAIKU` unset. */
+  anthropicModelHaiku: string;
+  /** Chat tier: Medium (Sonnet). Default when `ANTHROPIC_MODEL_SONNET` unset. */
+  anthropicModelSonnet: string;
+  /** Chat tier: Long (Opus). Default when `ANTHROPIC_MODEL_OPUS` unset. */
+  anthropicModelOpus: string;
   /** Session / JWT signing (Auth.js); `NEXTAUTH_SECRET` is still read as fallback. */
   authSecret: string;
   operatorIngestSecret: string;
@@ -180,6 +186,12 @@ function buildServerEnv(): ServerEnv {
     bedrockEmbeddingModelId: trimOrEmpty(process.env.BEDROCK_EMBEDDING_MODEL_ID),
     embeddingDimensions: parseEmbeddingDimensions(),
     anthropicApiKey: trimOrEmpty(process.env.ANTHROPIC_API_KEY),
+    anthropicModelHaiku:
+      trimOrEmpty(process.env.ANTHROPIC_MODEL_HAIKU) || "claude-haiku-4-5",
+    anthropicModelSonnet:
+      trimOrEmpty(process.env.ANTHROPIC_MODEL_SONNET) || "claude-sonnet-4-6",
+    anthropicModelOpus:
+      trimOrEmpty(process.env.ANTHROPIC_MODEL_OPUS) || "claude-opus-4-7",
     authSecret: resolveAuthSecret(),
     operatorIngestSecret: trimOrEmpty(process.env.OPERATOR_INGEST_SECRET),
     sqsQueueUrl: trimOrEmpty(process.env.SQS_QUEUE_URL),

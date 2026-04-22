@@ -25,6 +25,7 @@ import {
   DEFAULT_CHAT_SOURCE_SCOPE,
   type ChatSourceScope,
 } from "@/lib/chat/source-scope";
+import type { ChatResponseLength } from "@/lib/chat/response-length";
 import { CitationAnchor } from "./citation-anchor";
 import { ScopePicker } from "./scope-picker";
 import styles from "./chat.module.css";
@@ -59,6 +60,8 @@ export function ChatSurface({
   const [clearError, setClearError] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
   const [scope, setScope] = useState<ChatSourceScope>(DEFAULT_CHAT_SOURCE_SCOPE);
+  const [responseLength, setResponseLength] =
+    useState<ChatResponseLength>("short");
 
   // `custom` mode requires at least one selected source per source-scope.ts
   // validation rules; surface the block in the UI rather than silently
@@ -124,7 +127,11 @@ export function ChatSurface({
         },
         // Step 14 #7: every chat request carries the serialized scope so the
         // server can expand presets → retrieval args and reject bogus ids.
-        body: JSON.stringify({ message: content, sourceScope: scope }),
+        body: JSON.stringify({
+          message: content,
+          sourceScope: scope,
+          responseLength,
+        }),
         signal: controller.signal,
       });
 
@@ -195,7 +202,7 @@ export function ChatSurface({
       setIsSending(false);
       textareaRef.current?.focus();
     }
-  }, [draft, isSending, scope, customScopeInvalid]);
+  }, [draft, isSending, scope, responseLength, customScopeInvalid]);
 
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -287,6 +294,24 @@ export function ChatSurface({
 
         <div className={styles.mainChat}>
           <div className={styles.chatToolbar}>
+            <div className={styles.responseLengthField}>
+              <label htmlFor="chat-response-length" className={styles.responseLengthLabel}>
+                How detailed should answers be?
+              </label>
+              <select
+                id="chat-response-length"
+                className={styles.responseLengthSelect}
+                value={responseLength}
+                onChange={(event) =>
+                  setResponseLength(event.target.value as ChatResponseLength)
+                }
+                disabled={isSending}
+              >
+                <option value="short">Short</option>
+                <option value="medium">Medium</option>
+                <option value="long">Long</option>
+              </select>
+            </div>
             <button
               type="button"
               className={styles.clearHistoryButton}

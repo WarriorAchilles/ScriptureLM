@@ -44,6 +44,7 @@ import { POST } from "@/app/api/chat/messages/route";
 import { retrieveContext, type RetrievedChunk } from "@/lib/retrieval";
 import { streamClaudeRagResponse } from "@/lib/llm/claude";
 import { REFUSAL_SUBSTRING } from "@/lib/chat/rag-prompt";
+import { getServerEnv } from "@/lib/config";
 
 const prisma = new PrismaClient();
 const createdUserIds: string[] = [];
@@ -263,6 +264,28 @@ describe("RAG chat streaming", () => {
     } | null;
     expect(debug?.chunkIds).toEqual([scriptureChunk.chunkId, sermonChunk.chunkId]);
     expect(debug?.refusal).toBe(false);
+  });
+
+  it("maps responseLength to the corresponding Claude model id", async () => {
+    const user = await createTestUser("model-tier");
+    mockSession(user.id, user.email);
+    vi.mocked(retrieveContext).mockResolvedValue([buildScriptureChunk()]);
+    vi.mocked(streamClaudeRagResponse).mockImplementation(
+      buildClaudeStubStream(["Answer."]),
+    );
+
+    const response = await POST(
+      buildPostRequest({ message: "Question?", responseLength: "long" }),
+    );
+    expect(response.status).toBe(200);
+    await readSseFrames(response);
+
+    expect(streamClaudeRagResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: getServerEnv().anthropicModelOpus,
+      }),
+      expect.anything(),
+    );
   });
 
   it("emits the fixed refusal substring without calling Claude when retrieval is empty", async () => {

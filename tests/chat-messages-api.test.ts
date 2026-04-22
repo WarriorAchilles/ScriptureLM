@@ -182,6 +182,16 @@ describe("chat messages API", () => {
     expect(response.status).toBe(400);
   });
 
+  it("rejects POST with invalid responseLength", async () => {
+    const user = await createTestUser("bad-length");
+    mockAuthenticatedUser(user.id, user.email);
+
+    const response = await POST(
+      buildPostRequest({ content: "hello", responseLength: "xlarge" }),
+    );
+    expect(response.status).toBe(400);
+  });
+
   it("persists three messages and returns them in chronological order", async () => {
     const user = await createTestUser("round-trip");
     mockAuthenticatedUser(user.id, user.email);

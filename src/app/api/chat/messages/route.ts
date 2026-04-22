@@ -12,6 +12,10 @@ import {
   validateChatSourceScope,
   type ChatSourceScope,
 } from "@/lib/chat/source-scope";
+import {
+  claudeModelForResponseLength,
+  parseChatResponseLength,
+} from "@/lib/chat/response-length";
 
 export const runtime = "nodejs";
 
@@ -117,6 +121,7 @@ export async function POST(request: Request): Promise<Response> {
     userId,
     content: parsed.content,
     sourceScope: validation.scope,
+    claudeModel: parsed.claudeModel,
     abortSignal: request.signal,
   });
 
@@ -136,7 +141,7 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 type ParsedRequest =
-  | { content: string; sourceScope: ChatSourceScope }
+  | { content: string; sourceScope: ChatSourceScope; claudeModel?: string }
   | { error: string; status: number };
 
 function parseRequestBody(body: unknown): ParsedRequest {
@@ -167,7 +172,17 @@ function parseRequestBody(body: unknown): ParsedRequest {
   if (!scopeParse.ok) {
     return { error: scopeParse.error, status: 400 };
   }
-  return { content: trimmed, sourceScope: scopeParse.scope };
+  const lengthParse = parseChatResponseLength(
+    (body as { responseLength?: unknown }).responseLength,
+  );
+  if (!lengthParse.ok) {
+    return { error: lengthParse.error, status: 400 };
+  }
+  const claudeModel =
+    lengthParse.value !== undefined
+      ? claudeModelForResponseLength(lengthParse.value)
+      : undefined;
+  return { content: trimmed, sourceScope: scopeParse.scope, claudeModel };
 }
 
 /**
@@ -179,6 +194,7 @@ function buildSseStream(params: {
   userId: string;
   content: string;
   sourceScope: ChatSourceScope;
+  claudeModel?: string;
   abortSignal: AbortSignal;
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -196,6 +212,7 @@ function buildSseStream(params: {
             userId: params.userId,
             userMessageContent: params.content,
             sourceScope: params.sourceScope,
+            ...(params.claudeModel ? { claudeModel: params.claudeModel } : {}),
             signal: params.abortSignal,
           },
         );

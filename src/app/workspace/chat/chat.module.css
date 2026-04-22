@@ -185,9 +185,67 @@
 
 .chatToolbar {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
   flex-shrink: 0;
   margin-bottom: 0.5rem;
+}
+
+.responseLengthField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: min(100%, 16rem);
+}
+
+.responseLengthLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--slm-text) 78%, transparent);
+}
+
+.responseLengthSelect {
+  font: inherit;
+  padding: 0.4rem 0.65rem;
+  padding-right: 1.9rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--slm-text) 18%, transparent);
+  background-color: color-mix(in oklch, var(--slm-text) 4%, transparent);
+  color: var(--slm-text);
+  cursor: pointer;
+  max-width: 100%;
+  appearance: none;
+  /* Native option list: without this, Chromium often shows a light popup with
+     grey-on-white options on dark app themes (see sources `pageSizeSelect`). */
+  color-scheme: light dark;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5l3 3 3-3'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 0.75rem;
+}
+
+/* Chromium / Firefox honor these on `<option>` so the open list stays readable. */
+.responseLengthSelect option {
+  color: var(--slm-text);
+  background-color: var(--slm-input-bg);
+}
+
+.responseLengthSelect:hover:not(:disabled) {
+  background-color: color-mix(in oklch, var(--slm-text) 7%, transparent);
+}
+
+.responseLengthSelect:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--slm-text) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.responseLengthSelect:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .clearHistoryButton {

@@ -50,6 +50,11 @@ export type RunRagTurnParams = Readonly<{
   userMessageContent: string;
   /** Preset-form scope from the UI. Defaults to `{ mode: "all" }`. */
   sourceScope?: ChatSourceScope;
+  /**
+   * Claude model id (from `responseLength` tier on the API). When omitted,
+   * `streamClaudeRagResponse` uses `ANTHROPIC_MODEL` / its default.
+   */
+  claudeModel?: string;
   /** AbortSignal forwarded to Claude when the client disconnects. */
   signal?: AbortSignal;
 }>;
@@ -187,6 +192,7 @@ export async function* runRagTurn(
     {
       system: systemPrompt,
       messages: claudeMessages,
+      ...(params.claudeModel ? { model: params.claudeModel } : {}),
       signal: params.signal,
     },
     deps.anthropicClient ? { client: deps.anthropicClient } : {},
